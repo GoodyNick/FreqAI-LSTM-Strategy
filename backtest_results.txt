@@ -1,596 +1,403 @@
-2025-03-03 13:50:56,965 - freqtrade - INFO - freqtrade 2025.1
-2025-03-03 13:50:57,139 - numexpr.utils - INFO - NumExpr defaulting to 16 threads.
-2025-03-03 13:50:58,372 - freqtrade.configuration.load_config - INFO - Using config: ./user_data/configs/config-torch-lstm_v2.json ...
-2025-03-03 13:50:58,373 - freqtrade.loggers - INFO - Enabling colorized output.
-2025-03-03 13:50:58,373 - freqtrade.loggers - INFO - Verbosity set to 0
-2025-03-03 13:50:58,374 - freqtrade.configuration.configuration - INFO - Using max_open_trades: 10 ...
-2025-03-03 13:50:58,374 - freqtrade.configuration.configuration - INFO - Parameter --timerange detected: 20240401-20240501 ...
-2025-03-03 13:50:58,375 - freqtrade.configuration.configuration - INFO - Using user-data directory: /home/nick/freqtrade/user_data ...
-2025-03-03 13:50:58,375 - freqtrade.configuration.configuration - INFO - Using data directory: /home/nick/freqtrade/user_data/data/binance ...
-2025-03-03 13:50:58,376 - freqtrade.configuration.configuration - INFO - Parameter --cache=day detected ...
-2025-03-03 13:50:58,376 - freqtrade.configuration.configuration - INFO - Filter trades by timerange: 20240401-20240501
-2025-03-03 13:50:58,376 - freqtrade.configuration.configuration - INFO - Using freqaimodel class name: PyTorchLSTMRegressor_v2
-2025-03-03 13:50:58,377 - freqtrade.exchange.check_exchange - INFO - Checking exchange...
-2025-03-03 13:50:58,387 - freqtrade.exchange.check_exchange - INFO - Exchange "binance" is officially supported by the Freqtrade development team.
-2025-03-03 13:50:58,388 - freqtrade.configuration.configuration - INFO - Using pairlist from configuration.
-2025-03-03 13:50:58,388 - freqtrade.configuration.config_validation - INFO - Validating configuration ...
-2025-03-03 13:50:58,391 - freqtrade.commands.optimize_commands - INFO - Starting freqtrade in Backtesting mode
-2025-03-03 13:50:58,392 - freqtrade.exchange.exchange - INFO - Instance is running with dry_run enabled
-2025-03-03 13:50:58,392 - freqtrade.exchange.exchange - INFO - Using CCXT 4.4.52
-2025-03-03 13:50:58,392 - freqtrade.exchange.exchange - INFO - Applying additional ccxt config: {'options': {'defaultType': 'swap'}, 'enableRateLimit': True, 'rateLimit': 50}
-2025-03-03 13:50:58,401 - freqtrade.exchange.exchange - INFO - Applying additional ccxt config: {'options': {'defaultType': 'swap'}, 'enableRateLimit': True, 'rateLimit': 50}
-2025-03-03 13:50:58,413 - freqtrade.exchange.exchange - INFO - Using Exchange "Binance"
-2025-03-03 13:51:01,028 - freqtrade.resolvers.exchange_resolver - INFO - Using resolved exchange 'Binance'...
-2025-03-03 13:51:01,037 - freqtrade.resolvers.iresolver - INFO - Using resolved strategy ExampleLSTMStrategy_v2 from '/home/nick/freqtrade/user_data/strategies/ExampleLSTMStrategy_v2.py'...
-2025-03-03 13:51:01,038 - freqtrade.strategy.hyper - INFO - Found no parameter file.
-2025-03-03 13:51:01,038 - freqtrade.resolvers.strategy_resolver - INFO - Override strategy 'order_types' with value in config file: {'entry': 'market', 'exit': 'market', 'emergency_exit': 'market', 
+2025-03-05 21:47:46,389 - freqtrade - INFO - freqtrade 2025.1
+2025-03-05 21:47:46,599 - numexpr.utils - INFO - NumExpr defaulting to 16 threads.
+2025-03-05 21:47:47,819 - freqtrade.configuration.load_config - INFO - Using config: ./user_data/configs/config-torch-lstm_v2.json ...
+2025-03-05 21:47:47,820 - freqtrade.loggers - INFO - Enabling colorized output.
+2025-03-05 21:47:47,821 - freqtrade.loggers - INFO - Verbosity set to 0
+2025-03-05 21:47:47,822 - freqtrade.configuration.configuration - INFO - Using max_open_trades: -1 ...
+2025-03-05 21:47:47,822 - freqtrade.configuration.configuration - INFO - Parameter --timerange detected: 20240401-20240501 ...
+2025-03-05 21:47:47,822 - freqtrade.configuration.configuration - INFO - Using user-data directory: /home/nick/freqtrade/user_data ...
+2025-03-05 21:47:47,823 - freqtrade.configuration.configuration - INFO - Using data directory: /home/nick/freqtrade/user_data/data/binance ...
+2025-03-05 21:47:47,823 - freqtrade.configuration.configuration - INFO - Parameter --cache=day detected ...
+2025-03-05 21:47:47,823 - freqtrade.configuration.configuration - INFO - Filter trades by timerange: 20240401-20240501
+2025-03-05 21:47:47,824 - freqtrade.configuration.configuration - INFO - Using freqaimodel class name: PyTorchLSTMRegressor_v2
+2025-03-05 21:47:47,824 - freqtrade.exchange.check_exchange - INFO - Checking exchange...
+2025-03-05 21:47:47,835 - freqtrade.exchange.check_exchange - INFO - Exchange "binance" is officially supported by the Freqtrade development team.
+2025-03-05 21:47:47,835 - freqtrade.configuration.configuration - INFO - Using pairlist from configuration.
+2025-03-05 21:47:47,836 - freqtrade.configuration.config_validation - INFO - Validating configuration ...
+2025-03-05 21:47:47,839 - freqtrade.commands.optimize_commands - INFO - Starting freqtrade in Backtesting mode
+2025-03-05 21:47:47,840 - freqtrade.exchange.exchange - INFO - Instance is running with dry_run enabled
+2025-03-05 21:47:47,840 - freqtrade.exchange.exchange - INFO - Using CCXT 4.4.52
+2025-03-05 21:47:47,841 - freqtrade.exchange.exchange - INFO - Applying additional ccxt config: {'options': {'defaultType': 'swap'}, 'enableRateLimit': True, 'rateLimit': 50}
+2025-03-05 21:47:47,850 - freqtrade.exchange.exchange - INFO - Applying additional ccxt config: {'options': {'defaultType': 'swap'}, 'enableRateLimit': True, 'rateLimit': 50}
+2025-03-05 21:47:47,863 - freqtrade.exchange.exchange - INFO - Using Exchange "Binance"
+2025-03-05 21:47:50,153 - freqtrade.resolvers.exchange_resolver - INFO - Using resolved exchange 'Binance'...
+2025-03-05 21:47:51,346 - freqtrade.resolvers.iresolver - INFO - Using resolved strategy ExampleLSTMStrategy_v2 from '/home/nick/freqtrade/user_data/strategies/ExampleLSTMStrategy_v2.py'...
+2025-03-05 21:47:51,347 - freqtrade.strategy.hyper - INFO - Found no parameter file.
+2025-03-05 21:47:51,347 - freqtrade.resolvers.strategy_resolver - INFO - Override strategy 'order_types' with value in config file: {'entry': 'market', 'exit': 'market', 'emergency_exit': 'market', 
 'force_entry': 'market', 'force_exit': 'market', 'stoploss': 'market', 'stoploss_on_exchange': False, 'stoploss_on_exchange_interval': 60}.
-2025-03-03 13:51:01,039 - freqtrade.resolvers.strategy_resolver - INFO - Override strategy 'stake_currency' with value in config file: USDT.
-2025-03-03 13:51:01,039 - freqtrade.resolvers.strategy_resolver - INFO - Override strategy 'stake_amount' with value in config file: 100.
-2025-03-03 13:51:01,039 - freqtrade.resolvers.strategy_resolver - INFO - Override strategy 'unfilledtimeout' with value in config file: {'entry': 10, 'exit': 30, 'exit_timeout_count': 0, 'unit': 
+2025-03-05 21:47:51,348 - freqtrade.resolvers.strategy_resolver - INFO - Override strategy 'stake_currency' with value in config file: USDT.
+2025-03-05 21:47:51,348 - freqtrade.resolvers.strategy_resolver - INFO - Override strategy 'stake_amount' with value in config file: 100.
+2025-03-05 21:47:51,348 - freqtrade.resolvers.strategy_resolver - INFO - Override strategy 'unfilledtimeout' with value in config file: {'entry': 10, 'exit': 30, 'exit_timeout_count': 0, 'unit': 
 'minutes'}.
-2025-03-03 13:51:01,040 - freqtrade.resolvers.strategy_resolver - INFO - Override strategy 'max_open_trades' with value in config file: 10.
-2025-03-03 13:51:01,040 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using minimal_roi: {'0': 1}
-2025-03-03 13:51:01,040 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using timeframe: 1h
-2025-03-03 13:51:01,040 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using stoploss: -1
-2025-03-03 13:51:01,041 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using trailing_stop: False
-2025-03-03 13:51:01,041 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using trailing_stop_positive: 0.001
-2025-03-03 13:51:01,041 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using trailing_stop_positive_offset: 0.0139
-2025-03-03 13:51:01,041 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using trailing_only_offset_is_reached: True
-2025-03-03 13:51:01,042 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using use_custom_stoploss: True
-2025-03-03 13:51:01,042 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using process_only_new_candles: True
-2025-03-03 13:51:01,042 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using order_types: {'entry': 'market', 'exit': 'market', 'emergency_exit': 'market', 'force_entry': 'market', 
+2025-03-05 21:47:51,349 - freqtrade.resolvers.strategy_resolver - INFO - Override strategy 'max_open_trades' with value in config file: inf.
+2025-03-05 21:47:51,349 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using minimal_roi: {'0': 1}
+2025-03-05 21:47:51,350 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using timeframe: 1h
+2025-03-05 21:47:51,350 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using stoploss: -1
+2025-03-05 21:47:51,350 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using trailing_stop: False
+2025-03-05 21:47:51,351 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using trailing_stop_positive: 0.001
+2025-03-05 21:47:51,351 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using trailing_stop_positive_offset: 0.0139
+2025-03-05 21:47:51,351 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using trailing_only_offset_is_reached: True
+2025-03-05 21:47:51,351 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using use_custom_stoploss: False
+2025-03-05 21:47:51,352 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using process_only_new_candles: True
+2025-03-05 21:47:51,352 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using order_types: {'entry': 'market', 'exit': 'market', 'emergency_exit': 'market', 'force_entry': 'market', 
 'force_exit': 'market', 'stoploss': 'market', 'stoploss_on_exchange': False, 'stoploss_on_exchange_interval': 60}
-2025-03-03 13:51:01,043 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using order_time_in_force: {'entry': 'GTC', 'exit': 'GTC'}
-2025-03-03 13:51:01,043 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using stake_currency: USDT
-2025-03-03 13:51:01,043 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using stake_amount: 100
-2025-03-03 13:51:01,043 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using startup_candle_count: 20
-2025-03-03 13:51:01,044 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using unfilledtimeout: {'entry': 10, 'exit': 30, 'exit_timeout_count': 0, 'unit': 'minutes'}
-2025-03-03 13:51:01,044 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using use_exit_signal: True
-2025-03-03 13:51:01,044 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using exit_profit_only: False
-2025-03-03 13:51:01,044 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using ignore_roi_if_entry_signal: False
-2025-03-03 13:51:01,045 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using exit_profit_offset: 0.0
-2025-03-03 13:51:01,045 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using disable_dataframe_checks: False
-2025-03-03 13:51:01,045 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using ignore_buying_expired_candle_after: 0
-2025-03-03 13:51:01,046 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using position_adjustment_enable: False
-2025-03-03 13:51:01,046 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using max_entry_position_adjustment: -1
-2025-03-03 13:51:01,046 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using max_open_trades: 10
-2025-03-03 13:51:01,046 - freqtrade.configuration.config_validation - INFO - Validating configuration ...
-2025-03-03 13:51:01,051 - freqtrade.resolvers.iresolver - INFO - Using resolved pairlist StaticPairList from '/home/nick/freqtrade/freqtrade/plugins/pairlist/StaticPairList.py'...
-2025-03-03 13:51:01,057 - freqtrade.resolvers.iresolver - INFO - Using resolved pairlist ShuffleFilter from '/home/nick/freqtrade/freqtrade/plugins/pairlist/ShuffleFilter.py'...
-2025-03-03 13:51:01,057 - ShuffleFilter - INFO - Backtesting mode detected, applying seed value: 42
-2025-03-03 13:51:01,074 - freqtrade.optimize.backtesting - INFO - Using fee 0.0500% - worst case fee from exchange (lowest tier).
-2025-03-03 13:51:01,075 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 1h to 4520
-2025-03-03 13:51:01,088 - freqtrade.data.history.history_utils - INFO - Using indicator startup period: 4520 ...
-2025-03-03 13:51:01,550 - freqtrade.optimize.backtesting - INFO - Loading data from 2023-09-25 16:00:00 up to 2024-05-01 00:00:00 (218 days).
-2025-03-03 13:51:01,826 - freqtrade.optimize.backtesting - INFO - Dataload complete. Calculating indicators
-2025-03-03 13:51:01,828 - freqtrade.optimize.backtesting - INFO - Running backtesting for Strategy ExampleLSTMStrategy_v2
-2025-03-03 13:51:03,008 - freqtrade.resolvers.iresolver - WARNING - Could not import /home/nick/freqtrade/user_data/freqaimodels/LSTMRegressor.py due to 'No module named 
+2025-03-05 21:47:51,352 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using order_time_in_force: {'entry': 'GTC', 'exit': 'GTC'}
+2025-03-05 21:47:51,353 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using stake_currency: USDT
+2025-03-05 21:47:51,353 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using stake_amount: 100
+2025-03-05 21:47:51,353 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using startup_candle_count: 20
+2025-03-05 21:47:51,353 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using unfilledtimeout: {'entry': 10, 'exit': 30, 'exit_timeout_count': 0, 'unit': 'minutes'}
+2025-03-05 21:47:51,354 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using use_exit_signal: True
+2025-03-05 21:47:51,354 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using exit_profit_only: False
+2025-03-05 21:47:51,354 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using ignore_roi_if_entry_signal: False
+2025-03-05 21:47:51,354 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using exit_profit_offset: 0.0
+2025-03-05 21:47:51,355 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using disable_dataframe_checks: False
+2025-03-05 21:47:51,355 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using ignore_buying_expired_candle_after: 0
+2025-03-05 21:47:51,355 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using position_adjustment_enable: False
+2025-03-05 21:47:51,356 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using max_entry_position_adjustment: -1
+2025-03-05 21:47:51,356 - freqtrade.resolvers.strategy_resolver - INFO - Strategy using max_open_trades: inf
+2025-03-05 21:47:51,356 - freqtrade.configuration.config_validation - INFO - Validating configuration ...
+2025-03-05 21:47:51,360 - freqtrade.resolvers.iresolver - INFO - Using resolved pairlist StaticPairList from '/home/nick/freqtrade/freqtrade/plugins/pairlist/StaticPairList.py'...
+2025-03-05 21:47:51,366 - freqtrade.resolvers.iresolver - INFO - Using resolved pairlist ShuffleFilter from '/home/nick/freqtrade/freqtrade/plugins/pairlist/ShuffleFilter.py'...
+2025-03-05 21:47:51,366 - ShuffleFilter - INFO - Backtesting mode detected, applying seed value: 42
+2025-03-05 21:47:51,379 - freqtrade.optimize.backtesting - INFO - Using fee 0.0500% - worst case fee from exchange (lowest tier).
+2025-03-05 21:47:51,380 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 1h to 4520
+2025-03-05 21:47:51,395 - freqtrade.data.history.history_utils - INFO - Using indicator startup period: 4520 ...
+2025-03-05 21:47:51,471 - freqtrade.optimize.backtesting - INFO - Loading data from 2023-09-25 16:00:00 up to 2024-05-01 00:00:00 (218 days).
+2025-03-05 21:47:51,503 - freqtrade.optimize.backtesting - INFO - Dataload complete. Calculating indicators
+2025-03-05 21:47:51,504 - freqtrade.optimize.backtesting - INFO - Running backtesting for Strategy ExampleLSTMStrategy_v2
+2025-03-05 21:47:51,525 - freqtrade.resolvers.iresolver - WARNING - Could not import /home/nick/freqtrade/user_data/freqaimodels/LSTMRegressor.py due to 'No module named 
 'freqtrade.freqai.torch.PyTorchModelTrainer''
-2025-03-03 13:51:03,009 - freqtrade.resolvers.iresolver - WARNING - Could not import /home/nick/freqtrade/user_data/freqaimodels/PyTorchLSTMRegressor.py due to 'No module named 
+2025-03-05 21:47:51,526 - freqtrade.resolvers.iresolver - WARNING - Could not import /home/nick/freqtrade/user_data/freqaimodels/PyTorchLSTMRegressor.py due to 'No module named 
 'freqtrade.freqai.torch.PyTorchLSTMModel''
-2025-03-03 13:51:03,012 - freqtrade.resolvers.iresolver - INFO - Using resolved freqaimodel PyTorchLSTMRegressor_v2 from '/home/nick/freqtrade/user_data/freqaimodels/PyTorchLSTMRegressor_v2.py'...
-2025-03-03 13:51:03,012 - freqtrade.freqai.freqai_interface - INFO - Backtesting module configured to save all models.
-2025-03-03 13:51:03,013 - freqtrade.freqai.data_drawer - INFO - Could not find existing datadrawer, starting from scratch
-2025-03-03 13:51:03,013 - freqtrade.freqai.data_drawer - INFO - Could not find existing historic_predictions, starting from scratch
-2025-03-03 13:51:03,014 - freqtrade.freqai.data_drawer - INFO - Could not find existing metric tracker, starting from scratch
-2025-03-03 13:51:03,014 - freqtrade.freqai.freqai_interface - INFO - Set fresh train queue from whitelist. Queue: ['BTC/USDT:USDT', 'LTC/USDT:USDT', 'BNB/USDT:USDT', 'XRP/USDT:USDT', 'ADA/USDT:USDT', 
-'DOT/USDT:USDT', 'SOL/USDT:USDT', 'LINK/USDT:USDT', 'AVAX/USDT:USDT']
-2025-03-03 13:51:03,268 - freqtrade.strategy.hyper - INFO - No params for buy found, using default values.
-2025-03-03 13:51:03,269 - freqtrade.strategy.hyper - INFO - Strategy Parameter(default): threshold_buy = 0
-2025-03-03 13:51:03,269 - freqtrade.strategy.hyper - INFO - No params for sell found, using default values.
-2025-03-03 13:51:03,270 - freqtrade.strategy.hyper - INFO - Strategy Parameter(default): threshold_sell = 0
-2025-03-03 13:51:03,270 - freqtrade.strategy.hyper - INFO - No params for protection found, using default values.
-2025-03-03 13:51:03,573 - ExampleLSTMStrategy_v2 - INFO - 🔍 Feature dimensions before training: (5241, 24)
-2025-03-03 13:51:03,575 - freqtrade.freqai.freqai_interface - INFO - Training 1 timeranges
-2025-03-03 13:51:03,576 - freqtrade.freqai.freqai_interface - INFO - Training XRP/USDT:USDT, 1/9 pairs from 2023-10-04 00:00:00 to 2024-04-01 00:00:00, 1/1 trains
-2025-03-03 13:51:03,577 - freqtrade.freqai.data_kitchen - INFO - Could not find backtesting prediction file at 
-/home/nick/freqtrade/user_data/models/torch-lstm12/backtesting_predictions/cb_xrp_1711929600_prediction.feather
-2025-03-03 13:51:03,734 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 2h to 2360
-2025-03-03 13:51:03,734 - freqtrade.data.dataprovider - INFO - Loading data for XRP/USDT:USDT 2h from 2023-09-17 08:00:00 to 2024-05-01 00:00:00
-2025-03-03 13:51:03,850 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 4h to 1280
-2025-03-03 13:51:03,850 - freqtrade.data.dataprovider - INFO - Loading data for XRP/USDT:USDT 4h from 2023-08-31 16:00:00 to 2024-05-01 00:00:00
-2025-03-03 13:51:05,892 - ExampleLSTMStrategy_v2 - INFO - 🔍 Total features before model training: 423
-2025-03-03 13:51:05,917 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 1h to 4520
-2025-03-03 13:51:05,918 - freqtrade.data.dataprovider - INFO - Loading data for BTC/USDT:USDT 1h from 2023-09-25 16:00:00 to 2024-05-01 00:00:00
-2025-03-03 13:51:06,079 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 2h to 2360
-2025-03-03 13:51:06,079 - freqtrade.data.dataprovider - INFO - Loading data for BTC/USDT:USDT 2h from 2023-09-17 08:00:00 to 2024-05-01 00:00:00
-2025-03-03 13:51:06,211 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 4h to 1280
-2025-03-03 13:51:06,212 - freqtrade.data.dataprovider - INFO - Loading data for BTC/USDT:USDT 4h from 2023-08-31 16:00:00 to 2024-05-01 00:00:00
-2025-03-03 13:51:06,349 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 1h to 4520
-2025-03-03 13:51:06,350 - freqtrade.data.dataprovider - INFO - Loading data for ETH/USDT:USDT 1h from 2023-09-25 16:00:00 to 2024-05-01 00:00:00
-2025-03-03 13:51:06,489 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 2h to 2360
-2025-03-03 13:51:06,490 - freqtrade.data.dataprovider - INFO - Loading data for ETH/USDT:USDT 2h from 2023-09-17 08:00:00 to 2024-05-01 00:00:00
-2025-03-03 13:51:06,638 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 4h to 1280
-2025-03-03 13:51:06,639 - freqtrade.data.dataprovider - INFO - Loading data for ETH/USDT:USDT 4h from 2023-08-31 16:00:00 to 2024-05-01 00:00:00
-2025-03-03 13:51:07,658 - freqtrade.freqai.freqai_interface - INFO - Could not find model at /home/nick/freqtrade/user_data/models/torch-lstm12/sub-train-XRP_1711929600/cb_xrp_1711929600
-2025-03-03 13:51:07.906449: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:477] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
-WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
-E0000 00:00:1740997267.916206   14829 cuda_dnn.cc:8310] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
-E0000 00:00:1740997267.919159   14829 cuda_blas.cc:1418] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
-2025-03-03 13:51:07.930262: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
-To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2025-03-03 13:51:09,117 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - -------------------- Starting training XRP/USDT:USDT --------------------
-2025-03-03 13:51:09,188 - freqtrade.freqai.data_kitchen - INFO - XRP/USDT:USDT: dropped 0 training points due to NaNs in populated dataset 4280.
-2025-03-03 13:51:09,189 - freqtrade.freqai.data_kitchen - INFO - 🔍 Checking dataset before applying FreqAI filtering...
-2025-03-03 13:51:09,189 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape Before Filtering: (4280, 910)
-2025-03-03 13:51:09,194 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape After Filtering: (4280, 579)
-2025-03-03 13:51:09,194 - freqtrade.freqai.data_kitchen - INFO - 📝 Labels Shape After Filtering: (4280, 1)
-2025-03-03 13:51:09,408 - datasieve.pipeline - INFO - reduced feature dimension by 486
-2025-03-03 13:51:09,410 - datasieve.pipeline - INFO - explained variance 0.9990281599642832
-2025-03-03 13:51:10,056 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - Training model on 93 features
-2025-03-03 13:51:10,056 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - Training model on 3424 data points
-2025-03-03 13:51:10,057 - PyTorchLSTMRegressor_v2 - INFO - 🚀 Using GPU for training!
-2025-03-03 13:51:10,057 - PyTorchLSTMRegressor_v2 - WARNING - ⚠ Feature count changed! Reinitializing model with 93 features.
-2025-03-03 13:51:10,317 - PyTorchLSTMRegressor_v2 - INFO - ✅ Feature dimensions after reshaping: (85, 40, 93)
-2025-03-03 13:51:10,318 - PyTorchLSTMRegressor_v2 - INFO - ✅ Label dimensions after reshaping: (85, 40, 1)
-2025-03-03 13:51:11,851 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 1/100 - Loss: 0.2060 - LR: 0.001000
-2025-03-03 13:51:12,377 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 2/100 - Loss: 0.1268 - LR: 0.001000
-2025-03-03 13:51:12,898 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 3/100 - Loss: 0.0981 - LR: 0.001000
-2025-03-03 13:51:13,388 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 4/100 - Loss: 0.0853 - LR: 0.001000
-2025-03-03 13:51:13,916 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 5/100 - Loss: 0.0756 - LR: 0.001000
-2025-03-03 13:51:16,965 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 11/100 - Loss: 0.0491 - LR: 0.001000
-2025-03-03 13:51:21,860 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 21/100 - Loss: 0.0295 - LR: 0.000850
-2025-03-03 13:51:26,736 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 31/100 - Loss: 0.0209 - LR: 0.000722
-2025-03-03 13:51:31,636 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 41/100 - Loss: 0.0176 - LR: 0.000614
-2025-03-03 13:51:36,500 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 51/100 - Loss: 0.0151 - LR: 0.000522
-2025-03-03 13:51:41,516 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 61/100 - Loss: 0.0145 - LR: 0.000444
-2025-03-03 13:51:46,381 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 71/100 - Loss: 0.0131 - LR: 0.000377
-2025-03-03 13:51:51,242 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 81/100 - Loss: 0.0118 - LR: 0.000377
-2025-03-03 13:51:56,095 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 91/100 - Loss: 0.0108 - LR: 0.000321
-2025-03-03 13:51:58,596 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 96/100 - Loss: 0.0113 - LR: 0.000272
-2025-03-03 13:51:59,082 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 97/100 - Loss: 0.0105 - LR: 0.000272
-2025-03-03 13:51:59,566 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 98/100 - Loss: 0.0102 - LR: 0.000272
-2025-03-03 13:52:00,049 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 99/100 - Loss: 0.0103 - LR: 0.000272
-2025-03-03 13:52:00,536 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 100/100 - Loss: 0.0104 - LR: 0.000272
-2025-03-03 13:52:00,584 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - ✅ Training Completed | Total Epochs: 100 | Final Train Loss: 0.0104
-2025-03-03 13:52:00,593 - PyTorchLSTMRegressor_v2 - INFO - 💾 Model saved at: /home/nick/freqtrade/user_data/models/pytorch_lstm_v2.pth
-2025-03-03 13:52:00,594 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - -------------------- Done training XRP/USDT:USDT (51.48 secs) --------------------
-2025-03-03 13:52:00,629 - freqtrade.freqai.utils - INFO - Model type does not support generating feature importances.
-2025-03-03 13:52:00,629 - freqtrade.freqai.freqai_interface - INFO - Saving backtest model to disk.
-2025-03-03 13:52:00,630 - freqtrade.freqai.torch.PyTorchLSTMModel_v2 - INFO - 💾 Saving model to /home/nick/freqtrade/user_data/models/torch-lstm12/sub-train-XRP_1711929600/cb_xrp_1711929600_model.zip
-2025-03-03 13:52:00,657 - freqtrade.freqai.data_kitchen - INFO - 🔍 Checking dataset before applying FreqAI filtering...
-2025-03-03 13:52:00,658 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape Before Filtering: (720, 910)
-2025-03-03 13:52:00,660 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape After Filtering: (720, 579)
-2025-03-03 13:52:00,660 - freqtrade.freqai.data_kitchen - INFO - 📝 Labels Shape After Filtering: (0, 0)
-2025-03-03 13:52:00,960 - ExampleLSTMStrategy_v2 - INFO - 🔍 do_predict distribution: do_predict
-0.0    4521
-1.0     720
-Name: count, dtype: int64
-2025-03-03 13:52:00,961 - ExampleLSTMStrategy_v2 - INFO - 🔍 T mean: 0.008277633326242179, min: -0.9993359152637855, max: 0.9998672959692055
-2025-03-03 13:52:00,961 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target mean: 0.0335798507880955, min: -0.764175289364598, max: 1.0932763011239832
-2025-03-03 13:52:00,962 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target_mean mean: 0.0011002962382188934, min: 0.0, max: 0.008009239700701696
-2025-03-03 13:52:00,963 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target_std mean: 0.07031207846071608, min: 0.0, max: 0.5118133377952956
-2025-03-03 13:52:00,967 - ExampleLSTMStrategy_v2 - INFO - 🔍 `do_predict=1` Count: 720, `do_predict=-1` Count: 0
-2025-03-03 13:52:00,968 - ExampleLSTMStrategy_v2 - INFO - 🔍 Prediction Metrics | Pair: XRP/USDT:USDT | Total Predictions: 720 | Fraction Predicted: 0.1374 | Rolling Accuracy: 0.5000 | MAE: 0.559230 | 
-Avg Confidence: 0.6076 | Correlation: 0.1832
-2025-03-03 13:52:00,970 - ExampleLSTMStrategy_v2 - INFO - ✅ Prediction metrics saved to /home/nick/freqtrade/user_data/prediction_metrics.csv
-2025-03-03 13:52:01,271 - ExampleLSTMStrategy_v2 - INFO - 🔍 Feature dimensions before training: (5241, 24)
-2025-03-03 13:52:01,272 - freqtrade.freqai.freqai_interface - INFO - Training 1 timeranges
-2025-03-03 13:52:01,273 - freqtrade.freqai.freqai_interface - INFO - Training SOL/USDT:USDT, 2/9 pairs from 2023-10-04 00:00:00 to 2024-04-01 00:00:00, 1/1 trains
-2025-03-03 13:52:01,274 - freqtrade.freqai.data_kitchen - INFO - Could not find backtesting prediction file at 
-/home/nick/freqtrade/user_data/models/torch-lstm12/backtesting_predictions/cb_sol_1711929600_prediction.feather
-2025-03-03 13:52:01,382 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 2h to 2360
-2025-03-03 13:52:01,383 - freqtrade.data.dataprovider - INFO - Loading data for SOL/USDT:USDT 2h from 2023-09-17 08:00:00 to 2024-05-01 00:00:00
-2025-03-03 13:52:01,480 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 4h to 1280
-2025-03-03 13:52:01,480 - freqtrade.data.dataprovider - INFO - Loading data for SOL/USDT:USDT 4h from 2023-08-31 16:00:00 to 2024-05-01 00:00:00
-2025-03-03 13:52:03,443 - ExampleLSTMStrategy_v2 - INFO - 🔍 Total features before model training: 423
-2025-03-03 13:52:04,752 - freqtrade.freqai.freqai_interface - INFO - Could not find model at /home/nick/freqtrade/user_data/models/torch-lstm12/sub-train-SOL_1711929600/cb_sol_1711929600
-2025-03-03 13:52:04,753 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - -------------------- Starting training SOL/USDT:USDT --------------------
-2025-03-03 13:52:04,779 - freqtrade.freqai.data_kitchen - INFO - SOL/USDT:USDT: dropped 0 training points due to NaNs in populated dataset 4280.
-2025-03-03 13:52:04,780 - freqtrade.freqai.data_kitchen - INFO - 🔍 Checking dataset before applying FreqAI filtering...
-2025-03-03 13:52:04,780 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape Before Filtering: (4280, 910)
-2025-03-03 13:52:04,785 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape After Filtering: (4280, 579)
-2025-03-03 13:52:04,785 - freqtrade.freqai.data_kitchen - INFO - 📝 Labels Shape After Filtering: (4280, 1)
-2025-03-03 13:52:05,056 - datasieve.pipeline - INFO - reduced feature dimension by 484
-2025-03-03 13:52:05,059 - datasieve.pipeline - INFO - explained variance 0.9990534181519565
-2025-03-03 13:52:05,573 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - Training model on 95 features
-2025-03-03 13:52:05,574 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - Training model on 3424 data points
-2025-03-03 13:52:05,574 - PyTorchLSTMRegressor_v2 - INFO - 🚀 Using GPU for training!
-2025-03-03 13:52:05,574 - PyTorchLSTMRegressor_v2 - WARNING - ⚠ Feature count changed! Reinitializing model with 95 features.
-2025-03-03 13:52:05,597 - PyTorchLSTMRegressor_v2 - INFO - ✅ Feature dimensions after reshaping: (85, 40, 95)
-2025-03-03 13:52:05,598 - PyTorchLSTMRegressor_v2 - INFO - ✅ Label dimensions after reshaping: (85, 40, 1)
-2025-03-03 13:52:06,266 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 1/100 - Loss: 0.2332 - LR: 0.001000
-2025-03-03 13:52:06,850 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 2/100 - Loss: 0.1489 - LR: 0.001000
-2025-03-03 13:52:07,372 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 3/100 - Loss: 0.1116 - LR: 0.001000
-2025-03-03 13:52:07,854 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 4/100 - Loss: 0.0944 - LR: 0.001000
-2025-03-03 13:52:08,339 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 5/100 - Loss: 0.0827 - LR: 0.001000
-2025-03-03 13:52:11,208 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 11/100 - Loss: 0.0494 - LR: 0.001000
-2025-03-03 13:52:16,107 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 21/100 - Loss: 0.0295 - LR: 0.000850
-2025-03-03 13:52:23,119 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 31/100 - Loss: 0.0225 - LR: 0.000722
-2025-03-03 13:52:30,746 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 41/100 - Loss: 0.0176 - LR: 0.000614
-2025-03-03 13:52:37,752 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 51/100 - Loss: 0.0154 - LR: 0.000522
-2025-03-03 13:52:43,685 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 61/100 - Loss: 0.0151 - LR: 0.000444
-2025-03-03 13:52:48,664 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 71/100 - Loss: 0.0126 - LR: 0.000377
-2025-03-03 13:52:54,047 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 81/100 - Loss: 0.0114 - LR: 0.000377
-2025-03-03 13:52:58,972 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 91/100 - Loss: 0.0109 - LR: 0.000321
-2025-03-03 13:53:01,456 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 96/100 - Loss: 0.0105 - LR: 0.000272
-2025-03-03 13:53:01,950 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 97/100 - Loss: 0.0106 - LR: 0.000272
-2025-03-03 13:53:02,440 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 98/100 - Loss: 0.0104 - LR: 0.000272
-2025-03-03 13:53:02,938 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 99/100 - Loss: 0.0106 - LR: 0.000272
-2025-03-03 13:53:03,427 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 100/100 - Loss: 0.0106 - LR: 0.000272
-2025-03-03 13:53:03,476 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - ✅ Training Completed | Total Epochs: 100 | Final Train Loss: 0.0106
-2025-03-03 13:53:03,485 - PyTorchLSTMRegressor_v2 - INFO - 💾 Model saved at: /home/nick/freqtrade/user_data/models/pytorch_lstm_v2.pth
-2025-03-03 13:53:03,486 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - -------------------- Done training SOL/USDT:USDT (58.73 secs) --------------------
-2025-03-03 13:53:03,486 - freqtrade.freqai.utils - INFO - Model type does not support generating feature importances.
-2025-03-03 13:53:03,487 - freqtrade.freqai.freqai_interface - INFO - Saving backtest model to disk.
-2025-03-03 13:53:03,487 - freqtrade.freqai.torch.PyTorchLSTMModel_v2 - INFO - 💾 Saving model to /home/nick/freqtrade/user_data/models/torch-lstm12/sub-train-SOL_1711929600/cb_sol_1711929600_model.zip
-2025-03-03 13:53:03,510 - freqtrade.freqai.data_kitchen - INFO - 🔍 Checking dataset before applying FreqAI filtering...
-2025-03-03 13:53:03,510 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape Before Filtering: (720, 910)
-2025-03-03 13:53:03,511 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape After Filtering: (720, 579)
-2025-03-03 13:53:03,512 - freqtrade.freqai.data_kitchen - INFO - 📝 Labels Shape After Filtering: (0, 0)
-2025-03-03 13:53:03,666 - ExampleLSTMStrategy_v2 - INFO - 🔍 do_predict distribution: do_predict
-0.0    4521
-1.0     720
-Name: count, dtype: int64
-2025-03-03 13:53:03,667 - ExampleLSTMStrategy_v2 - INFO - 🔍 T mean: 0.06384181370827931, min: -0.9937650147218869, max: 0.999182529978493
-2025-03-03 13:53:03,668 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target mean: -0.03658152678787863, min: -1.1442202365421223, max: 1.2670312899036231
-2025-03-03 13:53:03,668 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target_mean mean: 0.009719269321912033, min: 0.0, max: 0.070748181272418
-2025-03-03 13:53:03,668 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target_std mean: 0.07475499626467032, min: 0.0, max: 0.5441540769765792
-2025-03-03 13:53:03,672 - ExampleLSTMStrategy_v2 - INFO - 🔍 `do_predict=1` Count: 720, `do_predict=-1` Count: 0
-2025-03-03 13:53:03,673 - ExampleLSTMStrategy_v2 - INFO - 🔍 Prediction Metrics | Pair: SOL/USDT:USDT | Total Predictions: 720 | Fraction Predicted: 0.1374 | Rolling Accuracy: 0.7000 | MAE: 0.345385 | 
-Avg Confidence: 0.8376 | Correlation: 0.2271
-2025-03-03 13:53:03,674 - ExampleLSTMStrategy_v2 - INFO - ✅ Prediction metrics saved to /home/nick/freqtrade/user_data/prediction_metrics.csv
-2025-03-03 13:53:03,958 - ExampleLSTMStrategy_v2 - INFO - 🔍 Feature dimensions before training: (5241, 24)
-2025-03-03 13:53:03,960 - freqtrade.freqai.freqai_interface - INFO - Training 1 timeranges
-2025-03-03 13:53:03,961 - freqtrade.freqai.freqai_interface - INFO - Training LINK/USDT:USDT, 3/9 pairs from 2023-10-04 00:00:00 to 2024-04-01 00:00:00, 1/1 trains
-2025-03-03 13:53:03,962 - freqtrade.freqai.data_kitchen - INFO - Could not find backtesting prediction file at 
-/home/nick/freqtrade/user_data/models/torch-lstm12/backtesting_predictions/cb_link_1711929600_prediction.feather
-2025-03-03 13:53:04,066 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 2h to 2360
-2025-03-03 13:53:04,066 - freqtrade.data.dataprovider - INFO - Loading data for LINK/USDT:USDT 2h from 2023-09-17 08:00:00 to 2024-05-01 00:00:00
-2025-03-03 13:53:04,155 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 4h to 1280
-2025-03-03 13:53:04,156 - freqtrade.data.dataprovider - INFO - Loading data for LINK/USDT:USDT 4h from 2023-08-31 16:00:00 to 2024-05-01 00:00:00
-2025-03-03 13:53:06,127 - ExampleLSTMStrategy_v2 - INFO - 🔍 Total features before model training: 423
-2025-03-03 13:53:07,561 - freqtrade.freqai.freqai_interface - INFO - Could not find model at /home/nick/freqtrade/user_data/models/torch-lstm12/sub-train-LINK_1711929600/cb_link_1711929600
-2025-03-03 13:53:07,562 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - -------------------- Starting training LINK/USDT:USDT --------------------
-2025-03-03 13:53:07,588 - freqtrade.freqai.data_kitchen - INFO - LINK/USDT:USDT: dropped 0 training points due to NaNs in populated dataset 4280.
-2025-03-03 13:53:07,588 - freqtrade.freqai.data_kitchen - INFO - 🔍 Checking dataset before applying FreqAI filtering...
-2025-03-03 13:53:07,589 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape Before Filtering: (4280, 910)
-2025-03-03 13:53:07,593 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape After Filtering: (4280, 579)
-2025-03-03 13:53:07,594 - freqtrade.freqai.data_kitchen - INFO - 📝 Labels Shape After Filtering: (4280, 1)
-2025-03-03 13:53:07,810 - datasieve.pipeline - INFO - reduced feature dimension by 485
-2025-03-03 13:53:07,812 - datasieve.pipeline - INFO - explained variance 0.999013161700388
-2025-03-03 13:53:08,308 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - Training model on 94 features
-2025-03-03 13:53:08,308 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - Training model on 3424 data points
-2025-03-03 13:53:08,309 - PyTorchLSTMRegressor_v2 - INFO - 🚀 Using GPU for training!
-2025-03-03 13:53:08,309 - PyTorchLSTMRegressor_v2 - WARNING - ⚠ Feature count changed! Reinitializing model with 94 features.
-2025-03-03 13:53:08,328 - PyTorchLSTMRegressor_v2 - INFO - ✅ Feature dimensions after reshaping: (85, 40, 94)
-2025-03-03 13:53:08,329 - PyTorchLSTMRegressor_v2 - INFO - ✅ Label dimensions after reshaping: (85, 40, 1)
-2025-03-03 13:53:09,033 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 1/100 - Loss: 0.2178 - LR: 0.001000
-2025-03-03 13:53:09,535 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 2/100 - Loss: 0.1319 - LR: 0.001000
-2025-03-03 13:53:10,017 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 3/100 - Loss: 0.1052 - LR: 0.001000
-2025-03-03 13:53:10,513 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 4/100 - Loss: 0.0818 - LR: 0.001000
-2025-03-03 13:53:11,018 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 5/100 - Loss: 0.0716 - LR: 0.001000
-2025-03-03 13:53:14,105 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 11/100 - Loss: 0.0477 - LR: 0.001000
-2025-03-03 13:53:19,097 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 21/100 - Loss: 0.0287 - LR: 0.000850
-2025-03-03 13:53:24,077 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 31/100 - Loss: 0.0214 - LR: 0.000722
-2025-03-03 13:53:29,722 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 41/100 - Loss: 0.0170 - LR: 0.000614
-2025-03-03 13:53:35,353 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 51/100 - Loss: 0.0152 - LR: 0.000522
-2025-03-03 13:53:41,003 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 61/100 - Loss: 0.0130 - LR: 0.000522
-2025-03-03 13:53:47,465 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 71/100 - Loss: 0.0128 - LR: 0.000444
-2025-03-03 13:53:53,837 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 81/100 - Loss: 0.0114 - LR: 0.000377
-2025-03-03 13:53:59,660 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 91/100 - Loss: 0.0105 - LR: 0.000321
-2025-03-03 13:54:02,308 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 96/100 - Loss: 0.0107 - LR: 0.000272
-2025-03-03 13:54:02,884 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 97/100 - Loss: 0.0101 - LR: 0.000272
-2025-03-03 13:54:03,433 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 98/100 - Loss: 0.0102 - LR: 0.000272
-2025-03-03 13:54:04,003 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 99/100 - Loss: 0.0105 - LR: 0.000272
-2025-03-03 13:54:04,577 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 100/100 - Loss: 0.0102 - LR: 0.000272
-2025-03-03 13:54:04,629 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - ✅ Training Completed | Total Epochs: 100 | Final Train Loss: 0.0102
-2025-03-03 13:54:04,639 - PyTorchLSTMRegressor_v2 - INFO - 💾 Model saved at: /home/nick/freqtrade/user_data/models/pytorch_lstm_v2.pth
-2025-03-03 13:54:04,640 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - -------------------- Done training LINK/USDT:USDT (57.08 secs) --------------------
-2025-03-03 13:54:04,640 - freqtrade.freqai.utils - INFO - Model type does not support generating feature importances.
-2025-03-03 13:54:04,640 - freqtrade.freqai.freqai_interface - INFO - Saving backtest model to disk.
-2025-03-03 13:54:04,641 - freqtrade.freqai.torch.PyTorchLSTMModel_v2 - INFO - 💾 Saving model to 
-/home/nick/freqtrade/user_data/models/torch-lstm12/sub-train-LINK_1711929600/cb_link_1711929600_model.zip
-2025-03-03 13:54:04,665 - freqtrade.freqai.data_kitchen - INFO - 🔍 Checking dataset before applying FreqAI filtering...
-2025-03-03 13:54:04,665 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape Before Filtering: (720, 910)
-2025-03-03 13:54:04,667 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape After Filtering: (720, 579)
-2025-03-03 13:54:04,667 - freqtrade.freqai.data_kitchen - INFO - 📝 Labels Shape After Filtering: (0, 0)
-2025-03-03 13:54:04,846 - ExampleLSTMStrategy_v2 - INFO - 🔍 do_predict distribution: do_predict
-0.0    4521
-1.0     720
-Name: count, dtype: int64
-2025-03-03 13:54:04,847 - ExampleLSTMStrategy_v2 - INFO - 🔍 T mean: 0.0279750513203218, min: -0.9995325828889396, max: 0.9952783954871344
-2025-03-03 13:54:04,848 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target mean: -0.008792994152614753, min: -0.8021201105142822, max: 0.9430662328760397
-2025-03-03 13:54:04,848 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target_mean mean: 0.006384834536600714, min: 0.0, max: 0.04647627473100604
-2025-03-03 13:54:04,848 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target_std mean: 0.07288363857366681, min: 0.0, max: 0.5305321524508163
-2025-03-03 13:54:04,853 - ExampleLSTMStrategy_v2 - INFO - 🔍 `do_predict=1` Count: 720, `do_predict=-1` Count: 0
-2025-03-03 13:54:04,854 - ExampleLSTMStrategy_v2 - INFO - 🔍 Prediction Metrics | Pair: LINK/USDT:USDT | Total Predictions: 720 | Fraction Predicted: 0.1374 | Rolling Accuracy: 0.7800 | MAE: 0.278529 |
-Avg Confidence: 0.5398 | Correlation: 0.1790
-2025-03-03 13:54:04,855 - ExampleLSTMStrategy_v2 - INFO - ✅ Prediction metrics saved to /home/nick/freqtrade/user_data/prediction_metrics.csv
-2025-03-03 13:54:05,220 - ExampleLSTMStrategy_v2 - INFO - 🔍 Feature dimensions before training: (5241, 24)
-2025-03-03 13:54:05,221 - freqtrade.freqai.freqai_interface - INFO - Training 1 timeranges
-2025-03-03 13:54:05,222 - freqtrade.freqai.freqai_interface - INFO - Training ADA/USDT:USDT, 4/9 pairs from 2023-10-04 00:00:00 to 2024-04-01 00:00:00, 1/1 trains
-2025-03-03 13:54:05,223 - freqtrade.freqai.data_kitchen - INFO - Could not find backtesting prediction file at 
-/home/nick/freqtrade/user_data/models/torch-lstm12/backtesting_predictions/cb_ada_1711929600_prediction.feather
-2025-03-03 13:54:05,338 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 2h to 2360
-2025-03-03 13:54:05,338 - freqtrade.data.dataprovider - INFO - Loading data for ADA/USDT:USDT 2h from 2023-09-17 08:00:00 to 2024-05-01 00:00:00
-2025-03-03 13:54:05,448 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 4h to 1280
-2025-03-03 13:54:05,449 - freqtrade.data.dataprovider - INFO - Loading data for ADA/USDT:USDT 4h from 2023-08-31 16:00:00 to 2024-05-01 00:00:00
-2025-03-03 13:54:07,456 - ExampleLSTMStrategy_v2 - INFO - 🔍 Total features before model training: 423
-2025-03-03 13:54:08,875 - freqtrade.freqai.freqai_interface - INFO - Could not find model at /home/nick/freqtrade/user_data/models/torch-lstm12/sub-train-ADA_1711929600/cb_ada_1711929600
-2025-03-03 13:54:08,875 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - -------------------- Starting training ADA/USDT:USDT --------------------
-2025-03-03 13:54:08,901 - freqtrade.freqai.data_kitchen - INFO - ADA/USDT:USDT: dropped 0 training points due to NaNs in populated dataset 4280.
-2025-03-03 13:54:08,901 - freqtrade.freqai.data_kitchen - INFO - 🔍 Checking dataset before applying FreqAI filtering...
-2025-03-03 13:54:08,902 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape Before Filtering: (4280, 910)
-2025-03-03 13:54:08,906 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape After Filtering: (4280, 579)
-2025-03-03 13:54:08,907 - freqtrade.freqai.data_kitchen - INFO - 📝 Labels Shape After Filtering: (4280, 1)
-2025-03-03 13:54:09,114 - datasieve.pipeline - INFO - reduced feature dimension by 487
-2025-03-03 13:54:09,115 - datasieve.pipeline - INFO - explained variance 0.9990511442097828
-2025-03-03 13:54:09,673 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - Training model on 92 features
-2025-03-03 13:54:09,674 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - Training model on 3424 data points
-2025-03-03 13:54:09,674 - PyTorchLSTMRegressor_v2 - INFO - 🚀 Using GPU for training!
-2025-03-03 13:54:09,674 - PyTorchLSTMRegressor_v2 - WARNING - ⚠ Feature count changed! Reinitializing model with 92 features.
-2025-03-03 13:54:09,693 - PyTorchLSTMRegressor_v2 - INFO - ✅ Feature dimensions after reshaping: (85, 40, 92)
-2025-03-03 13:54:09,694 - PyTorchLSTMRegressor_v2 - INFO - ✅ Label dimensions after reshaping: (85, 40, 1)
-2025-03-03 13:54:10,540 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 1/100 - Loss: 0.2295 - LR: 0.001000
-2025-03-03 13:54:11,211 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 2/100 - Loss: 0.1359 - LR: 0.001000
-2025-03-03 13:54:11,867 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 3/100 - Loss: 0.1072 - LR: 0.001000
-2025-03-03 13:54:12,513 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 4/100 - Loss: 0.0942 - LR: 0.001000
-2025-03-03 13:54:13,162 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 5/100 - Loss: 0.0823 - LR: 0.001000
-2025-03-03 13:54:17,066 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 11/100 - Loss: 0.0529 - LR: 0.001000
-2025-03-03 13:54:23,784 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 21/100 - Loss: 0.0321 - LR: 0.000850
-2025-03-03 13:54:30,192 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 31/100 - Loss: 0.0237 - LR: 0.000722
-2025-03-03 13:54:36,622 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 41/100 - Loss: 0.0200 - LR: 0.000614
-2025-03-03 13:54:44,126 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 51/100 - Loss: 0.0187 - LR: 0.000522
-2025-03-03 13:54:49,913 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 61/100 - Loss: 0.0146 - LR: 0.000444
-2025-03-03 13:54:55,089 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 71/100 - Loss: 0.0139 - LR: 0.000377
-2025-03-03 13:55:00,073 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 81/100 - Loss: 0.0132 - LR: 0.000321
-2025-03-03 13:55:05,091 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 91/100 - Loss: 0.0132 - LR: 0.000272
-2025-03-03 13:55:07,653 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 96/100 - Loss: 0.0129 - LR: 0.000272
-2025-03-03 13:55:08,145 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 97/100 - Loss: 0.0129 - LR: 0.000272
-2025-03-03 13:55:08,632 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 98/100 - Loss: 0.0127 - LR: 0.000272
-2025-03-03 13:55:09,114 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 99/100 - Loss: 0.0128 - LR: 0.000272
-2025-03-03 13:55:09,602 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 100/100 - Loss: 0.0119 - LR: 0.000272
-2025-03-03 13:55:09,651 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - ✅ Training Completed | Total Epochs: 100 | Final Train Loss: 0.0119
-2025-03-03 13:55:09,660 - PyTorchLSTMRegressor_v2 - INFO - 💾 Model saved at: /home/nick/freqtrade/user_data/models/pytorch_lstm_v2.pth
-2025-03-03 13:55:09,660 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - -------------------- Done training ADA/USDT:USDT (60.78 secs) --------------------
-2025-03-03 13:55:09,661 - freqtrade.freqai.utils - INFO - Model type does not support generating feature importances.
-2025-03-03 13:55:09,661 - freqtrade.freqai.freqai_interface - INFO - Saving backtest model to disk.
-2025-03-03 13:55:09,662 - freqtrade.freqai.torch.PyTorchLSTMModel_v2 - INFO - 💾 Saving model to /home/nick/freqtrade/user_data/models/torch-lstm12/sub-train-ADA_1711929600/cb_ada_1711929600_model.zip
-2025-03-03 13:55:09,684 - freqtrade.freqai.data_kitchen - INFO - 🔍 Checking dataset before applying FreqAI filtering...
-2025-03-03 13:55:09,685 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape Before Filtering: (720, 910)
-2025-03-03 13:55:09,686 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape After Filtering: (720, 579)
-2025-03-03 13:55:09,686 - freqtrade.freqai.data_kitchen - INFO - 📝 Labels Shape After Filtering: (0, 0)
-2025-03-03 13:55:09,844 - ExampleLSTMStrategy_v2 - INFO - 🔍 do_predict distribution: do_predict
-0.0    4521
-1.0     720
-Name: count, dtype: int64
-2025-03-03 13:55:09,844 - ExampleLSTMStrategy_v2 - INFO - 🔍 T mean: 0.02272021735339196, min: -0.9989015562038048, max: 0.9904997964350192
-2025-03-03 13:55:09,845 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target mean: 0.11977178202635866, min: -0.9979997606149192, max: 2.1738849795606754
-2025-03-03 13:55:09,845 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target_mean mean: 0.004970845738963725, min: 0.0, max: 0.036183614608206786
-2025-03-03 13:55:09,846 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target_std mean: 0.07515483807272114, min: 0.0, max: 0.5470645921376824
-2025-03-03 13:55:09,850 - ExampleLSTMStrategy_v2 - INFO - 🔍 `do_predict=1` Count: 720, `do_predict=-1` Count: 0
-2025-03-03 13:55:09,850 - ExampleLSTMStrategy_v2 - INFO - 🔍 Prediction Metrics | Pair: ADA/USDT:USDT | Total Predictions: 720 | Fraction Predicted: 0.1374 | Rolling Accuracy: 0.3600 | MAE: 1.007438 | 
-Avg Confidence: 0.8658 | Correlation: 0.0575
-2025-03-03 13:55:09,852 - ExampleLSTMStrategy_v2 - INFO - ✅ Prediction metrics saved to /home/nick/freqtrade/user_data/prediction_metrics.csv
-2025-03-03 13:55:10,145 - ExampleLSTMStrategy_v2 - INFO - 🔍 Feature dimensions before training: (5241, 24)
-2025-03-03 13:55:10,146 - freqtrade.freqai.freqai_interface - INFO - Training 1 timeranges
-2025-03-03 13:55:10,147 - freqtrade.freqai.freqai_interface - INFO - Training AVAX/USDT:USDT, 5/9 pairs from 2023-10-04 00:00:00 to 2024-04-01 00:00:00, 1/1 trains
-2025-03-03 13:55:10,148 - freqtrade.freqai.data_kitchen - INFO - Could not find backtesting prediction file at 
-/home/nick/freqtrade/user_data/models/torch-lstm12/backtesting_predictions/cb_avax_1711929600_prediction.feather
-2025-03-03 13:55:10,249 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 2h to 2360
-2025-03-03 13:55:10,250 - freqtrade.data.dataprovider - INFO - Loading data for AVAX/USDT:USDT 2h from 2023-09-17 08:00:00 to 2024-05-01 00:00:00
-2025-03-03 13:55:10,339 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 4h to 1280
-2025-03-03 13:55:10,340 - freqtrade.data.dataprovider - INFO - Loading data for AVAX/USDT:USDT 4h from 2023-08-31 16:00:00 to 2024-05-01 00:00:00
-2025-03-03 13:55:12,341 - ExampleLSTMStrategy_v2 - INFO - 🔍 Total features before model training: 423
-2025-03-03 13:55:13,750 - freqtrade.freqai.freqai_interface - INFO - Could not find model at /home/nick/freqtrade/user_data/models/torch-lstm12/sub-train-AVAX_1711929600/cb_avax_1711929600
-2025-03-03 13:55:13,751 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - -------------------- Starting training AVAX/USDT:USDT --------------------
-2025-03-03 13:55:13,777 - freqtrade.freqai.data_kitchen - INFO - AVAX/USDT:USDT: dropped 0 training points due to NaNs in populated dataset 4280.
-2025-03-03 13:55:13,777 - freqtrade.freqai.data_kitchen - INFO - 🔍 Checking dataset before applying FreqAI filtering...
-2025-03-03 13:55:13,778 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape Before Filtering: (4280, 910)
-2025-03-03 13:55:13,782 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape After Filtering: (4280, 579)
-2025-03-03 13:55:13,783 - freqtrade.freqai.data_kitchen - INFO - 📝 Labels Shape After Filtering: (4280, 1)
-2025-03-03 13:55:13,976 - datasieve.pipeline - INFO - reduced feature dimension by 483
-2025-03-03 13:55:13,977 - datasieve.pipeline - INFO - explained variance 0.9990571338172678
-2025-03-03 13:55:14,486 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - Training model on 96 features
-2025-03-03 13:55:14,486 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - Training model on 3424 data points
-2025-03-03 13:55:14,487 - PyTorchLSTMRegressor_v2 - INFO - 🚀 Using GPU for training!
-2025-03-03 13:55:14,487 - PyTorchLSTMRegressor_v2 - WARNING - ⚠ Feature count changed! Reinitializing model with 96 features.
-2025-03-03 13:55:14,506 - PyTorchLSTMRegressor_v2 - INFO - ✅ Feature dimensions after reshaping: (85, 40, 96)
-2025-03-03 13:55:14,507 - PyTorchLSTMRegressor_v2 - INFO - ✅ Label dimensions after reshaping: (85, 40, 1)
-2025-03-03 13:55:15,206 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 1/100 - Loss: 0.2551 - LR: 0.001000
-2025-03-03 13:55:15,691 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 2/100 - Loss: 0.1549 - LR: 0.001000
-2025-03-03 13:55:16,183 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 3/100 - Loss: 0.1232 - LR: 0.001000
-2025-03-03 13:55:16,678 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 4/100 - Loss: 0.0987 - LR: 0.001000
-2025-03-03 13:55:17,186 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 5/100 - Loss: 0.0906 - LR: 0.001000
-2025-03-03 13:55:20,179 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 11/100 - Loss: 0.0570 - LR: 0.001000
-2025-03-03 13:55:25,114 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 21/100 - Loss: 0.0326 - LR: 0.001000
-2025-03-03 13:55:30,030 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 31/100 - Loss: 0.0247 - LR: 0.000850
-2025-03-03 13:55:37,003 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 41/100 - Loss: 0.0194 - LR: 0.000722
-2025-03-03 13:55:43,361 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 51/100 - Loss: 0.0165 - LR: 0.000614
-2025-03-03 13:55:49,294 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 61/100 - Loss: 0.0147 - LR: 0.000522
-2025-03-03 13:55:55,208 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 71/100 - Loss: 0.0136 - LR: 0.000444
-2025-03-03 13:56:01,044 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 81/100 - Loss: 0.0125 - LR: 0.000377
-2025-03-03 13:56:07,076 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 91/100 - Loss: 0.0117 - LR: 0.000321
-2025-03-03 13:56:09,780 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 96/100 - Loss: 0.0112 - LR: 0.000321
-2025-03-03 13:56:10,309 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 97/100 - Loss: 0.0119 - LR: 0.000321
-2025-03-03 13:56:10,847 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 98/100 - Loss: 0.0121 - LR: 0.000321
-2025-03-03 13:56:11,428 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 99/100 - Loss: 0.0111 - LR: 0.000272
-2025-03-03 13:56:11,950 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 100/100 - Loss: 0.0113 - LR: 0.000272
-2025-03-03 13:56:12,000 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - ✅ Training Completed | Total Epochs: 100 | Final Train Loss: 0.0113
-2025-03-03 13:56:12,010 - PyTorchLSTMRegressor_v2 - INFO - 💾 Model saved at: /home/nick/freqtrade/user_data/models/pytorch_lstm_v2.pth
-2025-03-03 13:56:12,011 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - -------------------- Done training AVAX/USDT:USDT (58.26 secs) --------------------
-2025-03-03 13:56:12,011 - freqtrade.freqai.utils - INFO - Model type does not support generating feature importances.
-2025-03-03 13:56:12,012 - freqtrade.freqai.freqai_interface - INFO - Saving backtest model to disk.
-2025-03-03 13:56:12,012 - freqtrade.freqai.torch.PyTorchLSTMModel_v2 - INFO - 💾 Saving model to 
-/home/nick/freqtrade/user_data/models/torch-lstm12/sub-train-AVAX_1711929600/cb_avax_1711929600_model.zip
-2025-03-03 13:56:12,036 - freqtrade.freqai.data_kitchen - INFO - 🔍 Checking dataset before applying FreqAI filtering...
-2025-03-03 13:56:12,037 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape Before Filtering: (720, 910)
-2025-03-03 13:56:12,038 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape After Filtering: (720, 579)
-2025-03-03 13:56:12,039 - freqtrade.freqai.data_kitchen - INFO - 📝 Labels Shape After Filtering: (0, 0)
-2025-03-03 13:56:12,251 - ExampleLSTMStrategy_v2 - INFO - 🔍 do_predict distribution: do_predict
-0.0    4521
-1.0     720
-Name: count, dtype: int64
-2025-03-03 13:56:12,252 - ExampleLSTMStrategy_v2 - INFO - 🔍 T mean: 0.03911092171923073, min: -0.9979541224796241, max: 0.9919565150564008
-2025-03-03 13:56:12,252 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target mean: -0.01931356361498634, min: -1.1460879381205702, max: 0.9543748850072247
-2025-03-03 13:56:12,253 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target_mean mean: 0.006650929863648826, min: 0.0, max: 0.04841322696581042
-2025-03-03 13:56:12,253 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target_std mean: 0.07471142722657748, min: 0.0, max: 0.5438369306867953
-2025-03-03 13:56:12,257 - ExampleLSTMStrategy_v2 - INFO - 🔍 `do_predict=1` Count: 720, `do_predict=-1` Count: 0
-2025-03-03 13:56:12,258 - ExampleLSTMStrategy_v2 - INFO - 🔍 Prediction Metrics | Pair: AVAX/USDT:USDT | Total Predictions: 720 | Fraction Predicted: 0.1374 | Rolling Accuracy: 0.7000 | MAE: 0.368894 |
-Avg Confidence: 0.6077 | Correlation: 0.2543
-2025-03-03 13:56:12,259 - ExampleLSTMStrategy_v2 - INFO - ✅ Prediction metrics saved to /home/nick/freqtrade/user_data/prediction_metrics.csv
-2025-03-03 13:56:12,559 - ExampleLSTMStrategy_v2 - INFO - 🔍 Feature dimensions before training: (5241, 24)
-2025-03-03 13:56:12,560 - freqtrade.freqai.freqai_interface - INFO - Training 1 timeranges
-2025-03-03 13:56:12,562 - freqtrade.freqai.freqai_interface - INFO - Training BNB/USDT:USDT, 6/9 pairs from 2023-10-04 00:00:00 to 2024-04-01 00:00:00, 1/1 trains
-2025-03-03 13:56:12,562 - freqtrade.freqai.data_kitchen - INFO - Could not find backtesting prediction file at 
-/home/nick/freqtrade/user_data/models/torch-lstm12/backtesting_predictions/cb_bnb_1711929600_prediction.feather
-2025-03-03 13:56:12,669 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 2h to 2360
-2025-03-03 13:56:12,670 - freqtrade.data.dataprovider - INFO - Loading data for BNB/USDT:USDT 2h from 2023-09-17 08:00:00 to 2024-05-01 00:00:00
-2025-03-03 13:56:12,762 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 4h to 1280
-2025-03-03 13:56:12,762 - freqtrade.data.dataprovider - INFO - Loading data for BNB/USDT:USDT 4h from 2023-08-31 16:00:00 to 2024-05-01 00:00:00
-2025-03-03 13:56:14,799 - ExampleLSTMStrategy_v2 - INFO - 🔍 Total features before model training: 423
-2025-03-03 13:56:16,221 - freqtrade.freqai.freqai_interface - INFO - Could not find model at /home/nick/freqtrade/user_data/models/torch-lstm12/sub-train-BNB_1711929600/cb_bnb_1711929600
-2025-03-03 13:56:16,222 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - -------------------- Starting training BNB/USDT:USDT --------------------
-2025-03-03 13:56:16,247 - freqtrade.freqai.data_kitchen - INFO - BNB/USDT:USDT: dropped 0 training points due to NaNs in populated dataset 4280.
-2025-03-03 13:56:16,247 - freqtrade.freqai.data_kitchen - INFO - 🔍 Checking dataset before applying FreqAI filtering...
-2025-03-03 13:56:16,248 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape Before Filtering: (4280, 910)
-2025-03-03 13:56:16,253 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape After Filtering: (4280, 579)
-2025-03-03 13:56:16,253 - freqtrade.freqai.data_kitchen - INFO - 📝 Labels Shape After Filtering: (4280, 1)
-2025-03-03 13:56:16,478 - datasieve.pipeline - INFO - reduced feature dimension by 487
-2025-03-03 13:56:16,480 - datasieve.pipeline - INFO - explained variance 0.9990103519865506
-2025-03-03 13:56:17,139 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - Training model on 92 features
-2025-03-03 13:56:17,139 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - Training model on 3424 data points
-2025-03-03 13:56:17,140 - PyTorchLSTMRegressor_v2 - INFO - 🚀 Using GPU for training!
-2025-03-03 13:56:17,140 - PyTorchLSTMRegressor_v2 - WARNING - ⚠ Feature count changed! Reinitializing model with 92 features.
-2025-03-03 13:56:17,159 - PyTorchLSTMRegressor_v2 - INFO - ✅ Feature dimensions after reshaping: (85, 40, 92)
-2025-03-03 13:56:17,160 - PyTorchLSTMRegressor_v2 - INFO - ✅ Label dimensions after reshaping: (85, 40, 1)
-2025-03-03 13:56:17,838 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 1/100 - Loss: 0.2424 - LR: 0.001000
-2025-03-03 13:56:18,362 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 2/100 - Loss: 0.1487 - LR: 0.001000
-2025-03-03 13:56:18,875 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 3/100 - Loss: 0.1132 - LR: 0.001000
-2025-03-03 13:56:19,406 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 4/100 - Loss: 0.0944 - LR: 0.001000
-2025-03-03 13:56:19,916 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 5/100 - Loss: 0.0819 - LR: 0.001000
-2025-03-03 13:56:22,999 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 11/100 - Loss: 0.0563 - LR: 0.001000
-2025-03-03 13:56:28,172 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 21/100 - Loss: 0.0348 - LR: 0.000850
-2025-03-03 13:56:33,302 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 31/100 - Loss: 0.0249 - LR: 0.000722
-2025-03-03 13:56:38,756 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 41/100 - Loss: 0.0210 - LR: 0.000614
-2025-03-03 13:56:44,874 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 51/100 - Loss: 0.0175 - LR: 0.000522
-2025-03-03 13:56:50,370 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 61/100 - Loss: 0.0158 - LR: 0.000444
-2025-03-03 13:56:55,349 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 71/100 - Loss: 0.0138 - LR: 0.000377
-2025-03-03 13:57:00,457 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 81/100 - Loss: 0.0130 - LR: 0.000321
-2025-03-03 13:57:05,541 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 91/100 - Loss: 0.0120 - LR: 0.000272
-2025-03-03 13:57:08,043 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 96/100 - Loss: 0.0114 - LR: 0.000272
-2025-03-03 13:57:08,547 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 97/100 - Loss: 0.0110 - LR: 0.000272
-2025-03-03 13:57:09,047 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 98/100 - Loss: 0.0117 - LR: 0.000272
-2025-03-03 13:57:09,549 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 99/100 - Loss: 0.0119 - LR: 0.000272
-2025-03-03 13:57:10,041 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 100/100 - Loss: 0.0114 - LR: 0.000272
-2025-03-03 13:57:10,091 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - ✅ Training Completed | Total Epochs: 100 | Final Train Loss: 0.0114
-2025-03-03 13:57:10,100 - PyTorchLSTMRegressor_v2 - INFO - 💾 Model saved at: /home/nick/freqtrade/user_data/models/pytorch_lstm_v2.pth
-2025-03-03 13:57:10,101 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - -------------------- Done training BNB/USDT:USDT (53.88 secs) --------------------
-2025-03-03 13:57:10,102 - freqtrade.freqai.utils - INFO - Model type does not support generating feature importances.
-2025-03-03 13:57:10,102 - freqtrade.freqai.freqai_interface - INFO - Saving backtest model to disk.
-2025-03-03 13:57:10,103 - freqtrade.freqai.torch.PyTorchLSTMModel_v2 - INFO - 💾 Saving model to /home/nick/freqtrade/user_data/models/torch-lstm12/sub-train-BNB_1711929600/cb_bnb_1711929600_model.zip
-2025-03-03 13:57:10,125 - freqtrade.freqai.data_kitchen - INFO - 🔍 Checking dataset before applying FreqAI filtering...
-2025-03-03 13:57:10,125 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape Before Filtering: (720, 910)
-2025-03-03 13:57:10,126 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape After Filtering: (720, 579)
-2025-03-03 13:57:10,127 - freqtrade.freqai.data_kitchen - INFO - 📝 Labels Shape After Filtering: (0, 0)
-2025-03-03 13:57:10,296 - ExampleLSTMStrategy_v2 - INFO - 🔍 do_predict distribution: do_predict
-0.0    4521
-1.0     720
-Name: count, dtype: int64
-2025-03-03 13:57:10,297 - ExampleLSTMStrategy_v2 - INFO - 🔍 T mean: 0.07273082491568748, min: -0.9958603493472374, max: 0.9979130477549917
-2025-03-03 13:57:10,297 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target mean: 0.009093637051482103, min: -0.948947469850046, max: 0.9440786935455856
-2025-03-03 13:57:10,298 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target_mean mean: 0.009058165170636926, min: 0.0, max: 0.06593589397126128
-2025-03-03 13:57:10,298 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target_std mean: 0.07148592332795518, min: 0.0, max: 0.5203579502247404
-2025-03-03 13:57:10,302 - ExampleLSTMStrategy_v2 - INFO - 🔍 `do_predict=1` Count: 720, `do_predict=-1` Count: 0
-2025-03-03 13:57:10,303 - ExampleLSTMStrategy_v2 - INFO - 🔍 Prediction Metrics | Pair: BNB/USDT:USDT | Total Predictions: 720 | Fraction Predicted: 0.1374 | Rolling Accuracy: 0.7000 | MAE: 0.445168 | 
-Avg Confidence: 0.5165 | Correlation: 0.1830
-2025-03-03 13:57:10,304 - ExampleLSTMStrategy_v2 - INFO - ✅ Prediction metrics saved to /home/nick/freqtrade/user_data/prediction_metrics.csv
-2025-03-03 13:57:10,599 - ExampleLSTMStrategy_v2 - INFO - 🔍 Feature dimensions before training: (5241, 24)
-2025-03-03 13:57:10,600 - freqtrade.freqai.freqai_interface - INFO - Training 1 timeranges
-2025-03-03 13:57:10,601 - freqtrade.freqai.freqai_interface - INFO - Training DOT/USDT:USDT, 7/9 pairs from 2023-10-04 00:00:00 to 2024-04-01 00:00:00, 1/1 trains
-2025-03-03 13:57:10,602 - freqtrade.freqai.data_kitchen - INFO - Could not find backtesting prediction file at 
-/home/nick/freqtrade/user_data/models/torch-lstm12/backtesting_predictions/cb_dot_1711929600_prediction.feather
-2025-03-03 13:57:10,707 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 2h to 2360
-2025-03-03 13:57:10,707 - freqtrade.data.dataprovider - INFO - Loading data for DOT/USDT:USDT 2h from 2023-09-17 08:00:00 to 2024-05-01 00:00:00
-2025-03-03 13:57:10,799 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 4h to 1280
-2025-03-03 13:57:10,799 - freqtrade.data.dataprovider - INFO - Loading data for DOT/USDT:USDT 4h from 2023-08-31 16:00:00 to 2024-05-01 00:00:00
-2025-03-03 13:57:12,775 - ExampleLSTMStrategy_v2 - INFO - 🔍 Total features before model training: 423
-2025-03-03 13:57:14,216 - freqtrade.freqai.freqai_interface - INFO - Could not find model at /home/nick/freqtrade/user_data/models/torch-lstm12/sub-train-DOT_1711929600/cb_dot_1711929600
-2025-03-03 13:57:14,216 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - -------------------- Starting training DOT/USDT:USDT --------------------
-2025-03-03 13:57:14,241 - freqtrade.freqai.data_kitchen - INFO - DOT/USDT:USDT: dropped 0 training points due to NaNs in populated dataset 4280.
-2025-03-03 13:57:14,241 - freqtrade.freqai.data_kitchen - INFO - 🔍 Checking dataset before applying FreqAI filtering...
-2025-03-03 13:57:14,242 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape Before Filtering: (4280, 910)
-2025-03-03 13:57:14,246 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape After Filtering: (4280, 579)
-2025-03-03 13:57:14,247 - freqtrade.freqai.data_kitchen - INFO - 📝 Labels Shape After Filtering: (4280, 1)
-2025-03-03 13:57:14,447 - datasieve.pipeline - INFO - reduced feature dimension by 485
-2025-03-03 13:57:14,449 - datasieve.pipeline - INFO - explained variance 0.999054294389877
-2025-03-03 13:57:15,058 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - Training model on 94 features
-2025-03-03 13:57:15,059 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - Training model on 3424 data points
-2025-03-03 13:57:15,059 - PyTorchLSTMRegressor_v2 - INFO - 🚀 Using GPU for training!
-2025-03-03 13:57:15,060 - PyTorchLSTMRegressor_v2 - WARNING - ⚠ Feature count changed! Reinitializing model with 94 features.
-2025-03-03 13:57:15,080 - PyTorchLSTMRegressor_v2 - INFO - ✅ Feature dimensions after reshaping: (85, 40, 94)
-2025-03-03 13:57:15,081 - PyTorchLSTMRegressor_v2 - INFO - ✅ Label dimensions after reshaping: (85, 40, 1)
-2025-03-03 13:57:15,776 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 1/100 - Loss: 0.2223 - LR: 0.001000
-2025-03-03 13:57:16,289 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 2/100 - Loss: 0.1473 - LR: 0.001000
-2025-03-03 13:57:16,869 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 3/100 - Loss: 0.1102 - LR: 0.001000
-2025-03-03 13:57:17,396 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 4/100 - Loss: 0.0943 - LR: 0.001000
-2025-03-03 13:57:17,905 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 5/100 - Loss: 0.0849 - LR: 0.001000
-2025-03-03 13:57:20,976 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 11/100 - Loss: 0.0569 - LR: 0.001000
-2025-03-03 13:57:26,371 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 21/100 - Loss: 0.0358 - LR: 0.000850
-2025-03-03 13:57:31,719 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 31/100 - Loss: 0.0264 - LR: 0.000722
-2025-03-03 13:57:37,193 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 41/100 - Loss: 0.0204 - LR: 0.000614
-2025-03-03 13:57:42,873 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 51/100 - Loss: 0.0179 - LR: 0.000522
-2025-03-03 13:57:48,056 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 61/100 - Loss: 0.0154 - LR: 0.000444
-2025-03-03 13:57:52,992 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 71/100 - Loss: 0.0140 - LR: 0.000377
-2025-03-03 13:57:58,429 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 81/100 - Loss: 0.0128 - LR: 0.000321
-2025-03-03 13:58:03,769 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 91/100 - Loss: 0.0118 - LR: 0.000272
-2025-03-03 13:58:06,357 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 96/100 - Loss: 0.0117 - LR: 0.000272
-2025-03-03 13:58:06,897 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 97/100 - Loss: 0.0116 - LR: 0.000272
-2025-03-03 13:58:07,441 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 98/100 - Loss: 0.0120 - LR: 0.000272
-2025-03-03 13:58:07,965 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 99/100 - Loss: 0.0118 - LR: 0.000272
-2025-03-03 13:58:08,516 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 100/100 - Loss: 0.0115 - LR: 0.000272
-2025-03-03 13:58:08,564 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - ✅ Training Completed | Total Epochs: 100 | Final Train Loss: 0.0115
-2025-03-03 13:58:08,573 - PyTorchLSTMRegressor_v2 - INFO - 💾 Model saved at: /home/nick/freqtrade/user_data/models/pytorch_lstm_v2.pth
-2025-03-03 13:58:08,574 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - -------------------- Done training DOT/USDT:USDT (54.36 secs) --------------------
-2025-03-03 13:58:08,574 - freqtrade.freqai.utils - INFO - Model type does not support generating feature importances.
-2025-03-03 13:58:08,575 - freqtrade.freqai.freqai_interface - INFO - Saving backtest model to disk.
-2025-03-03 13:58:08,575 - freqtrade.freqai.torch.PyTorchLSTMModel_v2 - INFO - 💾 Saving model to 
-/home/nick/freqtrade/user_data/models/torch-lstm12/sub-train-DOT_1711929600/cb_dot_1711929600_model.zip
-2025-03-03 13:58:08,599 - freqtrade.freqai.data_kitchen - INFO - 🔍 Checking dataset before applying FreqAI filtering...
-2025-03-03 13:58:08,599 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape Before Filtering: (720, 910)
-2025-03-03 13:58:08,601 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape After Filtering: (720, 579)
-2025-03-03 13:58:08,601 - freqtrade.freqai.data_kitchen - INFO - 📝 Labels Shape After Filtering: (0, 0)
-2025-03-03 13:58:08,783 - ExampleLSTMStrategy_v2 - INFO - 🔍 do_predict distribution: do_predict
-0.0    4521
-1.0     720
-Name: count, dtype: int64
-2025-03-03 13:58:08,784 - ExampleLSTMStrategy_v2 - INFO - 🔍 T mean: 0.0282657226333876, min: -0.9998007394707769, max: 0.994625322763896
-2025-03-03 13:58:08,784 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target mean: 0.01583755272255708, min: -1.1909422083568322, max: 0.970418506530095
-2025-03-03 13:58:08,785 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target_mean mean: 0.0051882191273596116, min: 0.0, max: 0.03776591173123851
-2025-03-03 13:58:08,785 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target_std mean: 0.07481787631527195, min: 0.0, max: 0.544611791344917
-2025-03-03 13:58:08,790 - ExampleLSTMStrategy_v2 - INFO - 🔍 `do_predict=1` Count: 720, `do_predict=-1` Count: 0
-2025-03-03 13:58:08,790 - ExampleLSTMStrategy_v2 - INFO - 🔍 Prediction Metrics | Pair: DOT/USDT:USDT | Total Predictions: 720 | Fraction Predicted: 0.1374 | Rolling Accuracy: 0.6200 | 
-MAE: 0.492662 | Avg Confidence: 0.3819 | Correlation: 0.1981
-2025-03-03 13:58:08,792 - ExampleLSTMStrategy_v2 - INFO - ✅ Prediction metrics saved to /home/nick/freqtrade/user_data/prediction_metrics.csv
-2025-03-03 13:58:09,348 - ExampleLSTMStrategy_v2 - INFO - 🔍 Feature dimensions before training: (5241, 24)
-2025-03-03 13:58:09,350 - freqtrade.freqai.freqai_interface - INFO - Training 1 timeranges
-2025-03-03 13:58:09,351 - freqtrade.freqai.freqai_interface - INFO - Training BTC/USDT:USDT, 8/9 pairs from 2023-10-04 00:00:00 to 2024-04-01 00:00:00, 1/1 trains
-2025-03-03 13:58:09,352 - freqtrade.freqai.data_kitchen - INFO - Could not find backtesting prediction file at 
+2025-03-05 21:47:51,529 - freqtrade.resolvers.iresolver - INFO - Using resolved freqaimodel PyTorchLSTMRegressor_v2 from '/home/nick/freqtrade/user_data/freqaimodels/PyTorchLSTMRegressor_v2.py'...
+2025-03-05 21:47:51,529 - freqtrade.freqai.freqai_interface - INFO - Backtesting module configured to save all models.
+2025-03-05 21:47:51,530 - freqtrade.freqai.data_drawer - INFO - Could not find existing datadrawer, starting from scratch
+2025-03-05 21:47:51,530 - freqtrade.freqai.data_drawer - INFO - Could not find existing historic_predictions, starting from scratch
+2025-03-05 21:47:51,530 - freqtrade.freqai.data_drawer - INFO - Could not find existing metric tracker, starting from scratch
+2025-03-05 21:47:51,531 - freqtrade.freqai.freqai_interface - INFO - Set fresh train queue from whitelist. Queue: ['BTC/USDT:USDT']
+2025-03-05 21:47:52,401 - freqtrade.strategy.hyper - INFO - No params for buy found, using default values.
+2025-03-05 21:47:52,401 - freqtrade.strategy.hyper - INFO - Strategy Parameter(default): threshold_buy = 0
+2025-03-05 21:47:52,402 - freqtrade.strategy.hyper - INFO - No params for sell found, using default values.
+2025-03-05 21:47:52,402 - freqtrade.strategy.hyper - INFO - Strategy Parameter(default): threshold_sell = 0
+2025-03-05 21:47:52,403 - freqtrade.strategy.hyper - INFO - No params for protection found, using default values.
+2025-03-05 21:47:52,987 - ExampleLSTMStrategy_v2 - INFO - 🔍 Feature dimensions before training: (5241, 24)
+2025-03-05 21:47:52,989 - freqtrade.freqai.freqai_interface - INFO - Training 1 timeranges
+2025-03-05 21:47:52,991 - freqtrade.freqai.freqai_interface - INFO - Training BTC/USDT:USDT, 1/1 pairs from 2023-10-04 00:00:00 to 2024-04-01 00:00:00, 1/1 trains
+2025-03-05 21:47:52,991 - freqtrade.freqai.data_kitchen - INFO - Could not find backtesting prediction file at 
 /home/nick/freqtrade/user_data/models/torch-lstm12/backtesting_predictions/cb_btc_1711929600_prediction.feather
-2025-03-03 13:58:11,515 - ExampleLSTMStrategy_v2 - INFO - 🔍 Total features before model training: 423
-2025-03-03 13:58:12,557 - freqtrade.freqai.freqai_interface - INFO - Could not find model at 
-/home/nick/freqtrade/user_data/models/torch-lstm12/sub-train-BTC_1711929600/cb_btc_1711929600
-2025-03-03 13:58:12,557 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - -------------------- Starting training BTC/USDT:USDT --------------------
-2025-03-03 13:58:12,574 - freqtrade.freqai.data_kitchen - INFO - BTC/USDT:USDT: dropped 0 training points due to NaNs in populated dataset 4280.
-2025-03-03 13:58:12,575 - freqtrade.freqai.data_kitchen - INFO - 🔍 Checking dataset before applying FreqAI filtering...
-2025-03-03 13:58:12,575 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape Before Filtering: (4280, 667)
-2025-03-03 13:58:12,578 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape After Filtering: (4280, 390)
-2025-03-03 13:58:12,579 - freqtrade.freqai.data_kitchen - INFO - 📝 Labels Shape After Filtering: (4280, 1)
-2025-03-03 13:58:12,687 - datasieve.pipeline - INFO - reduced feature dimension by 325
-2025-03-03 13:58:12,688 - datasieve.pipeline - INFO - explained variance 0.9990452847524073
-2025-03-03 13:58:13,672 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - Training model on 65 features
-2025-03-03 13:58:13,672 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - Training model on 3424 data points
-2025-03-03 13:58:13,673 - PyTorchLSTMRegressor_v2 - INFO - 🚀 Using GPU for training!
-2025-03-03 13:58:13,673 - PyTorchLSTMRegressor_v2 - WARNING - ⚠ Feature count changed! Reinitializing model with 65 features.
-2025-03-03 13:58:13,696 - PyTorchLSTMRegressor_v2 - INFO - ✅ Feature dimensions after reshaping: (85, 40, 65)
-2025-03-03 13:58:13,697 - PyTorchLSTMRegressor_v2 - INFO - ✅ Label dimensions after reshaping: (85, 40, 1)
-2025-03-03 13:58:14,406 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 1/100 - Loss: 0.2214 - LR: 0.001000
-2025-03-03 13:58:14,896 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 2/100 - Loss: 0.1343 - LR: 0.001000
-2025-03-03 13:58:15,395 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 3/100 - Loss: 0.1023 - LR: 0.001000
-2025-03-03 13:58:15,943 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 4/100 - Loss: 0.0894 - LR: 0.001000
-2025-03-03 13:58:16,485 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 5/100 - Loss: 0.0805 - LR: 0.001000
-2025-03-03 13:58:19,747 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 11/100 - Loss: 0.0518 - LR: 0.001000
-2025-03-03 13:58:25,169 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 21/100 - Loss: 0.0350 - LR: 0.000850
-2025-03-03 13:58:30,312 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 31/100 - Loss: 0.0247 - LR: 0.000722
+2025-03-05 21:47:53,116 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 2h to 2360
+2025-03-05 21:47:53,117 - freqtrade.data.dataprovider - INFO - Loading data for BTC/USDT:USDT 2h from 2023-09-17 08:00:00 to 2024-05-01 00:00:00
+2025-03-05 21:47:53,224 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 4h to 1280
+2025-03-05 21:47:53,225 - freqtrade.data.dataprovider - INFO - Loading data for BTC/USDT:USDT 4h from 2023-08-31 16:00:00 to 2024-05-01 00:00:00
+2025-03-05 21:47:54,589 - ExampleLSTMStrategy_v2 - INFO - 🔍 Total features before model training: 423
+2025-03-05 21:47:54,615 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 1h to 4520
+2025-03-05 21:47:54,615 - freqtrade.data.dataprovider - INFO - Loading data for ETH/USDT:USDT 1h from 2023-09-25 16:00:00 to 2024-05-01 00:00:00
+2025-03-05 21:47:54,757 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 2h to 2360
+2025-03-05 21:47:54,758 - freqtrade.data.dataprovider - INFO - Loading data for ETH/USDT:USDT 2h from 2023-09-17 08:00:00 to 2024-05-01 00:00:00
+2025-03-05 21:47:54,878 - freqtrade.data.dataprovider - INFO - Increasing startup_candle_count for freqai on 4h to 1280
+2025-03-05 21:47:54,879 - freqtrade.data.dataprovider - INFO - Loading data for ETH/USDT:USDT 4h from 2023-08-31 16:00:00 to 2024-05-01 00:00:00
+2025-03-05 21:47:55,808 - freqtrade.freqai.freqai_interface - INFO - Could not find model at /home/nick/freqtrade/user_data/models/torch-lstm12/sub-train-BTC_1711929600/cb_btc_1711929600
+2025-03-05 21:47:56.047136: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:477] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1741198676.060995   13235 cuda_dnn.cc:8310] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+E0000 00:00:1741198676.065567   13235 cuda_blas.cc:1418] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2025-03-05 21:47:56.081749: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2025-03-05 21:47:57,189 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - -------------------- Starting training BTC/USDT:USDT --------------------
+2025-03-05 21:47:57,241 - freqtrade.freqai.data_kitchen - INFO - BTC/USDT:USDT: dropped 0 training points due to NaNs in populated dataset 4280.
+2025-03-05 21:47:57,241 - freqtrade.freqai.data_kitchen - INFO - 🔍 Checking dataset before applying FreqAI filtering...
+2025-03-05 21:47:57,242 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape Before Filtering: (4280, 667)
+2025-03-05 21:47:57,247 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape After Filtering: (4280, 390)
+2025-03-05 21:47:57,248 - freqtrade.freqai.data_kitchen - INFO - 📝 Labels Shape After Filtering: (4280, 1)
+2025-03-05 21:47:57,639 - datasieve.pipeline - INFO - reduced feature dimension by 325
+2025-03-05 21:47:57,640 - datasieve.pipeline - INFO - explained variance 0.9990452847524073
+2025-03-05 21:47:58,771 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - Training model on 65 features
+2025-03-05 21:47:58,772 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - Training model on 3424 data points
+2025-03-05 21:47:58,772 - PyTorchLSTMRegressor_v2 - INFO - 🚀 Using GPU for training!
+2025-03-05 21:47:58,773 - PyTorchLSTMRegressor_v2 - WARNING - ⚠ Feature count changed! Reinitializing model with 65 features.
+2025-03-05 21:47:59,120 - PyTorchLSTMRegressor_v2 - INFO - ✅ Feature dimensions after reshaping: (85, 40, 65)
+2025-03-05 21:47:59,121 - PyTorchLSTMRegressor_v2 - INFO - ✅ Label dimensions after reshaping: (85, 40, 1)
+2025-03-05 21:48:00,652 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 1/100 - Loss: 0.2099 - LR: 0.001000
+2025-03-05 21:48:01,163 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 2/100 - Loss: 0.1277 - LR: 0.001000
+2025-03-05 21:48:01,680 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 3/100 - Loss: 0.0975 - LR: 0.001000
+2025-03-05 21:48:02,176 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 4/100 - Loss: 0.0853 - LR: 0.001000
+2025-03-05 21:48:02,704 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 5/100 - Loss: 0.0762 - LR: 0.001000
+2025-03-05 21:48:06,014 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 11/100 - Loss: 0.0503 - LR: 0.001000
+2025-03-05 21:48:11,068 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 21/100 - Loss: 0.0320 - LR: 0.001000
+2025-03-05 21:48:16,476 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 31/100 - Loss: 0.0251 - LR: 0.001000
+2025-03-05 21:48:21,588 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 41/100 - Loss: 0.0188 - LR: 0.000850
+2025-03-05 21:48:26,045 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 51/100 - Loss: 0.0167 - LR: 0.000722
+2025-03-05 21:48:31,097 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 61/100 - Loss: 0.0138 - LR: 0.000614
+2025-03-05 21:48:36,183 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 71/100 - Loss: 0.0131 - LR: 0.000522
+2025-03-05 21:48:41,330 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 81/100 - Loss: 0.0127 - LR: 0.000444
+2025-03-05 21:48:46,434 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 91/100 - Loss: 0.0110 - LR: 0.000377
+2025-03-05 21:48:48,999 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 96/100 - Loss: 0.0114 - LR: 0.000377
+2025-03-05 21:48:49,501 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 97/100 - Loss: 0.0111 - LR: 0.000377
+2025-03-05 21:48:50,002 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 98/100 - Loss: 0.0108 - LR: 0.000377
+2025-03-05 21:48:50,510 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 99/100 - Loss: 0.0115 - LR: 0.000321
+2025-03-05 21:48:51,014 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - Epoch 100/100 - Loss: 0.0112 - LR: 0.000321
+2025-03-05 21:48:51,064 - freqtrade.freqai.torch.PyTorchModelTrainer_v2 - INFO - ✅ Training Completed | Total Epochs: 100 | Final Train Loss: 0.0112
+2025-03-05 21:48:51,074 - PyTorchLSTMRegressor_v2 - INFO - 💾 Model saved at: /home/nick/freqtrade/user_data/models/pytorch_lstm_v2.pth
+2025-03-05 21:48:51,075 - freqtrade.freqai.base_models.BasePyTorchRegressor - INFO - -------------------- Done training BTC/USDT:USDT (53.89 secs) --------------------
+2025-03-05 21:48:51,096 - freqtrade.freqai.utils - INFO - Model type does not support generating feature importances.
+2025-03-05 21:48:51,097 - freqtrade.freqai.freqai_interface - INFO - Saving backtest model to disk.
+2025-03-05 21:48:51,097 - freqtrade.freqai.torch.PyTorchLSTMModel_v2 - INFO - 💾 Saving model to /home/nick/freqtrade/user_data/models/torch-lstm12/sub-train-BTC_1711929600/cb_btc_1711929600_model.zip
+2025-03-05 21:48:51,125 - freqtrade.freqai.data_kitchen - INFO - 🔍 Checking dataset before applying FreqAI filtering...
+2025-03-05 21:48:51,126 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape Before Filtering: (720, 667)
+2025-03-05 21:48:51,127 - freqtrade.freqai.data_kitchen - INFO - 📝 Features Shape After Filtering: (720, 390)
+2025-03-05 21:48:51,128 - freqtrade.freqai.data_kitchen - INFO - 📝 Labels Shape After Filtering: (0, 0)
+2025-03-05 21:48:51,360 - ExampleLSTMStrategy_v2 - INFO - 🔍 do_predict distribution: do_predict
+0.0    4521
+1.0     720
+Name: count, dtype: int64
+2025-03-05 21:48:51,363 - ExampleLSTMStrategy_v2 - INFO - 🔍 T mean: 0.06947566278065952, min: -0.9993449729756453, max: 0.9997510132533535
+2025-03-05 21:48:51,363 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target mean: -0.004430581828918641, min: -2.0800281122697255, max: 1.1504322600375116
+2025-03-05 21:48:51,364 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target_mean mean: 0.009552422547539765, min: 0.0, max: 0.06953367579396655
+2025-03-05 21:48:51,364 - ExampleLSTMStrategy_v2 - INFO - 🔍 &-s_target_std mean: 0.07058135202285565, min: 0.0, max: 0.5137734249330366
+2025-03-05 21:48:51,368 - ExampleLSTMStrategy_v2 - INFO - 🔍 `do_predict=1` Count: 720, `do_predict=-1` Count: 0
+2025-03-05 21:48:51,369 - ExampleLSTMStrategy_v2 - INFO - 🔍 Prediction Metrics | Pair: BTC/USDT:USDT | Total Predictions: 720 | Fraction Predicted: 0.1374 | Rolling Accuracy: 0.8200 | MAE: 0.248178 | 
+Avg Confidence: 0.6990 | Correlation: 0.2696
+2025-03-05 21:48:51,371 - ExampleLSTMStrategy_v2 - INFO - ✅ Prediction metrics saved to /home/nick/freqtrade/user_data/prediction_metrics.csv
+2025-03-05 21:48:51,380 - freqtrade.optimize.backtesting - INFO - Backtesting with data from 2024-04-01 00:00:00 up to 2024-05-01 00:00:00 (30 days).
+2025-03-05 21:48:51,384 - ExampleLSTMStrategy_v2 - INFO - 🔍 ENTER SHORT SIGNALS CHECK BEFORE ENTRY
+2025-03-05 21:48:51,385 - ExampleLSTMStrategy_v2 - INFO - Empty DataFrame
+Columns: [date, open, high, low, close, volume, trades, orderflow, imbalances, stacked_imbalances_bid, stacked_imbalances_ask, max_delta, min_delta, bid, ask, delta, total_trades, ATR, 
+lookahead_dynamic, future_change, TS, T, atr, dynamic_multiplier, trades_BTC/USDT:USDT_1h, orderflow_BTC/USDT:USDT_1h, imbalances_BTC/USDT:USDT_1h, stacked_imbalances_bid_BTC/USDT:USDT_1h, 
+stacked_imbalances_ask_BTC/USDT:USDT_1h, max_delta_BTC/USDT:USDT_1h, min_delta_BTC/USDT:USDT_1h, bid_BTC/USDT:USDT_1h, ask_BTC/USDT:USDT_1h, delta_BTC/USDT:USDT_1h, total_trades_BTC/USDT:USDT_1h, 
+ATR_BTC/USDT:USDT_1h, lookahead_dynamic_BTC/USDT:USDT_1h, future_change_BTC/USDT:USDT_1h, TS_BTC/USDT:USDT_1h, T_BTC/USDT:USDT_1h, atr_BTC/USDT:USDT_1h, dynamic_multiplier_BTC/USDT:USDT_1h, 
+trades_5_BTC/USDT:USDT_1h, orderflow_5_BTC/USDT:USDT_1h, imbalances_5_BTC/USDT:USDT_1h, stacked_imbalances_bid_5_BTC/USDT:USDT_1h, stacked_imbalances_ask_5_BTC/USDT:USDT_1h, 
+max_delta_5_BTC/USDT:USDT_1h, min_delta_5_BTC/USDT:USDT_1h, bid_5_BTC/USDT:USDT_1h, ask_5_BTC/USDT:USDT_1h, delta_5_BTC/USDT:USDT_1h, total_trades_5_BTC/USDT:USDT_1h, ATR_5_BTC/USDT:USDT_1h, 
+lookahead_dynamic_5_BTC/USDT:USDT_1h, future_change_5_BTC/USDT:USDT_1h, TS_5_BTC/USDT:USDT_1h, T_5_BTC/USDT:USDT_1h, atr_5_BTC/USDT:USDT_1h, dynamic_multiplier_5_BTC/USDT:USDT_1h, 
+bb_lowerband-period_5_BTC/USDT:USDT_1h, bb_middleband-period_5_BTC/USDT:USDT_1h, bb_upperband-period_5_BTC/USDT:USDT_1h, trades_10_BTC/USDT:USDT_1h, orderflow_10_BTC/USDT:USDT_1h, 
+imbalances_10_BTC/USDT:USDT_1h, stacked_imbalances_bid_10_BTC/USDT:USDT_1h, stacked_imbalances_ask_10_BTC/USDT:USDT_1h, max_delta_10_BTC/USDT:USDT_1h, min_delta_10_BTC/USDT:USDT_1h, 
+bid_10_BTC/USDT:USDT_1h, ask_10_BTC/USDT:USDT_1h, delta_10_BTC/USDT:USDT_1h, total_trades_10_BTC/USDT:USDT_1h, ATR_10_BTC/USDT:USDT_1h, lookahead_dynamic_10_BTC/USDT:USDT_1h, 
+future_change_10_BTC/USDT:USDT_1h, TS_10_BTC/USDT:USDT_1h, T_10_BTC/USDT:USDT_1h, atr_10_BTC/USDT:USDT_1h, dynamic_multiplier_10_BTC/USDT:USDT_1h, bb_lowerband-period_10_BTC/USDT:USDT_1h, 
+bb_middleband-period_10_BTC/USDT:USDT_1h, bb_upperband-period_10_BTC/USDT:USDT_1h, trades_20_BTC/USDT:USDT_1h, orderflow_20_BTC/USDT:USDT_1h, imbalances_20_BTC/USDT:USDT_1h, 
+stacked_imbalances_bid_20_BTC/USDT:USDT_1h, stacked_imbalances_ask_20_BTC/USDT:USDT_1h, max_delta_20_BTC/USDT:USDT_1h, min_delta_20_BTC/USDT:USDT_1h, bid_20_BTC/USDT:USDT_1h, ask_20_BTC/USDT:USDT_1h, 
+delta_20_BTC/USDT:USDT_1h, total_trades_20_BTC/USDT:USDT_1h, ATR_20_BTC/USDT:USDT_1h, lookahead_dynamic_20_BTC/USDT:USDT_1h, future_change_20_BTC/USDT:USDT_1h, TS_20_BTC/USDT:USDT_1h, 
+T_20_BTC/USDT:USDT_1h, ...]
+Index: []
+
+[0 rows x 294 columns]
+2025-03-05 21:48:51,395 - ExampleLSTMStrategy_v2 - INFO - ✅ Total enter_long signals: 217
+2025-03-05 21:48:51,396 - ExampleLSTMStrategy_v2 - INFO - ✅ Total enter_short signals: 44
+2025-03-05 21:48:51,396 - ExampleLSTMStrategy_v2 - INFO - ✅ ENTER SHORT SIGNALS CHECK AFTER ENTRY
+2025-03-05 21:48:51,397 - ExampleLSTMStrategy_v2 - INFO -                           date     open  ...  vol_rank  valid_volume
+4523 2024-04-01 03:00:00+00:00  70930.1  ...      0.80          True
+4524 2024-04-01 04:00:00+00:00  70650.0  ...      0.68          True
+4525 2024-04-01 05:00:00+00:00  70512.8  ...      1.00          True
+4526 2024-04-01 06:00:00+00:00  69212.2  ...      0.98          True
+4527 2024-04-01 07:00:00+00:00  69651.8  ...      0.88          True
+4528 2024-04-01 08:00:00+00:00  69637.0  ...      0.94          True
+4529 2024-04-01 09:00:00+00:00  69449.9  ...      0.58          True
+4530 2024-04-01 10:00:00+00:00  69448.4  ...      0.58          True
+4531 2024-04-01 11:00:00+00:00  69610.1  ...      0.82          True
+4532 2024-04-01 12:00:00+00:00  69520.4  ...      0.72          True
+4533 2024-04-01 13:00:00+00:00  69892.1  ...      0.94          True
+4534 2024-04-01 14:00:00+00:00  69932.2  ...      0.98          True
+4716 2024-04-09 04:00:00+00:00  71339.0  ...      0.58          True
+4717 2024-04-09 05:00:00+00:00  71259.9  ...      0.50          True
+4724 2024-04-09 12:00:00+00:00  70858.2  ...      0.50          True
+4725 2024-04-09 13:00:00+00:00  70732.5  ...      0.90          True
+4796 2024-04-12 12:00:00+00:00  70950.9  ...      0.74          True
+4797 2024-04-12 13:00:00+00:00  70585.0  ...      0.90          True
+4798 2024-04-12 14:00:00+00:00  69934.5  ...      0.90          True
+4799 2024-04-12 15:00:00+00:00  69289.6  ...      0.80          True
+4800 2024-04-12 16:00:00+00:00  69374.0  ...      0.98          True
+4824 2024-04-13 16:00:00+00:00  67683.2  ...      0.66          True
+4825 2024-04-13 17:00:00+00:00  67450.6  ...      0.90          True
+4826 2024-04-13 18:00:00+00:00  66755.4  ...      0.78          True
+5082 2024-04-24 10:00:00+00:00  66328.5  ...      0.42          True
+5084 2024-04-24 12:00:00+00:00  66550.7  ...      0.54          True
+5085 2024-04-24 13:00:00+00:00  66317.8  ...      0.98          True
+5086 2024-04-24 14:00:00+00:00  66041.0  ...      1.00          True
+5087 2024-04-24 15:00:00+00:00  65212.8  ...      0.98          True
+5088 2024-04-24 16:00:00+00:00  64593.5  ...      0.94          True
+5089 2024-04-24 17:00:00+00:00  64771.4  ...      0.82          True
+5090 2024-04-24 18:00:00+00:00  64850.0  ...      0.88          True
+5186 2024-04-28 18:00:00+00:00  63730.1  ...      0.28          True
+5190 2024-04-28 22:00:00+00:00  63640.9  ...      0.94          True
+5191 2024-04-28 23:00:00+00:00  63127.9  ...      0.86          True
+5192 2024-04-29 00:00:00+00:00  63088.4  ...      0.74          True
+5193 2024-04-29 01:00:00+00:00  63229.2  ...      0.30          True
+5194 2024-04-29 02:00:00+00:00  63197.9  ...      0.86          True
+5195 2024-04-29 03:00:00+00:00  62678.2  ...      0.98          True
+5196 2024-04-29 04:00:00+00:00  62259.9  ...      0.84          True
+5197 2024-04-29 05:00:00+00:00  62515.6  ...      0.86          True
+5198 2024-04-29 06:00:00+00:00  62422.3  ...      0.92          True
+5199 2024-04-29 07:00:00+00:00  62170.9  ...      0.84          True
+5200 2024-04-29 08:00:00+00:00  62362.1  ...      0.60          True
+
+[44 rows x 297 columns]
+2025-03-05 21:48:51,460 - ExampleLSTMStrategy_v2 - INFO - 🔍 Active Trades Summary: Shorts: 718 | Longs: 703
+2025-03-05 21:48:51,464 - ExampleLSTMStrategy_v2 - INFO - 🔍 Sample Active Long Trades:
+2025-03-05 21:48:51,465 - ExampleLSTMStrategy_v2 - INFO -                           date  enter_long  exit_long  active_long_trade
+5211 2024-04-29 19:00:00+00:00           1          0               True
+5212 2024-04-29 20:00:00+00:00           0          0               True
+5213 2024-04-29 21:00:00+00:00           1          0               True
+5214 2024-04-29 22:00:00+00:00           1          0               True
+5215 2024-04-29 23:00:00+00:00           1          0               True
+5216 2024-04-30 00:00:00+00:00           1          0               True
+5217 2024-04-30 01:00:00+00:00           1          0               True
+5218 2024-04-30 02:00:00+00:00           1          0               True
+5219 2024-04-30 03:00:00+00:00           1          0               True
+5220 2024-04-30 04:00:00+00:00           0          1               True
+5221 2024-04-30 05:00:00+00:00           0          0               True
+5222 2024-04-30 06:00:00+00:00           0          0               True
+5223 2024-04-30 07:00:00+00:00           0          1               True
+5224 2024-04-30 08:00:00+00:00           0          1               True
+5225 2024-04-30 09:00:00+00:00           0          1               True
+5226 2024-04-30 10:00:00+00:00           0          1               True
+5227 2024-04-30 11:00:00+00:00           0          1               True
+5228 2024-04-30 12:00:00+00:00           0          1               True
+5229 2024-04-30 13:00:00+00:00           0          1               True
+5230 2024-04-30 14:00:00+00:00           0          1               True
+5231 2024-04-30 15:00:00+00:00           0          1               True
+5232 2024-04-30 16:00:00+00:00           0          1               True
+5233 2024-04-30 17:00:00+00:00           0          1               True
+5234 2024-04-30 18:00:00+00:00           0          1               True
+5235 2024-04-30 19:00:00+00:00           0          1               True
+5236 2024-04-30 20:00:00+00:00           0          1               True
+5237 2024-04-30 21:00:00+00:00           0          1               True
+5238 2024-04-30 22:00:00+00:00           0          1               True
+5239 2024-04-30 23:00:00+00:00           0          1               True
+5240 2024-05-01 00:00:00+00:00           0          0               True
+2025-03-05 21:48:51,470 - ExampleLSTMStrategy_v2 - INFO - 🔍 Sample Active Short Trades:
+2025-03-05 21:48:51,472 - ExampleLSTMStrategy_v2 - INFO -                           date  enter_short  exit_short  active_short_trade
+5211 2024-04-29 19:00:00+00:00            0           1                True
+5212 2024-04-29 20:00:00+00:00            0           1                True
+5213 2024-04-29 21:00:00+00:00            0           1                True
+5214 2024-04-29 22:00:00+00:00            0           1                True
+5215 2024-04-29 23:00:00+00:00            0           1                True
+5216 2024-04-30 00:00:00+00:00            0           1                True
+5217 2024-04-30 01:00:00+00:00            0           1                True
+5218 2024-04-30 02:00:00+00:00            0           1                True
+5219 2024-04-30 03:00:00+00:00            0           1                True
+5220 2024-04-30 04:00:00+00:00            0           0                True
+5221 2024-04-30 05:00:00+00:00            0           0                True
+5222 2024-04-30 06:00:00+00:00            0           0                True
+5223 2024-04-30 07:00:00+00:00            0           0                True
+5224 2024-04-30 08:00:00+00:00            0           0                True
+5225 2024-04-30 09:00:00+00:00            0           0                True
+5226 2024-04-30 10:00:00+00:00            0           0                True
+5227 2024-04-30 11:00:00+00:00            0           0                True
+5228 2024-04-30 12:00:00+00:00            0           0                True
+5229 2024-04-30 13:00:00+00:00            0           0                True
+5230 2024-04-30 14:00:00+00:00            0           0                True
+5231 2024-04-30 15:00:00+00:00            0           0                True
+5232 2024-04-30 16:00:00+00:00            0           0                True
+5233 2024-04-30 17:00:00+00:00            0           0                True
+5234 2024-04-30 18:00:00+00:00            0           0                True
+5235 2024-04-30 19:00:00+00:00            0           0                True
+5236 2024-04-30 20:00:00+00:00            0           1                True
+5237 2024-04-30 21:00:00+00:00            0           1                True
+5238 2024-04-30 22:00:00+00:00            0           1                True
+5239 2024-04-30 23:00:00+00:00            0           1                True
+5240 2024-05-01 00:00:00+00:00            0           0                True
+2025-03-05 21:48:51,477 - ExampleLSTMStrategy_v2 - INFO - ✅ Exit Conditions Triggered:
+2025-03-05 21:48:51,478 - ExampleLSTMStrategy_v2 - INFO - 🔹 timed_exit_long: 703
+2025-03-05 21:48:51,478 - ExampleLSTMStrategy_v2 - INFO - 🔹 timed_exit_short: 716
+2025-03-05 21:48:51,479 - ExampleLSTMStrategy_v2 - INFO - ✅ Total exit_long signals: 281
+2025-03-05 21:48:51,479 - ExampleLSTMStrategy_v2 - INFO - ✅ Total exit_short signals: 282
+2025-03-05 21:48:51,698 - freqtrade.misc - INFO - dumping json to "/home/nick/freqtrade/user_data/backtest_results/backtest-result-2025-03-05_21-48-51.meta.json"
+Result for strategy ExampleLSTMStrategy_v2
+                                                BACKTESTING REPORT                                                
+┏━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃          Pair ┃ Trades ┃ Avg Profit % ┃ Tot Profit USDT ┃ Tot Profit % ┃ Avg Duration ┃  Win  Draw  Loss  Win% ┃
+┡━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ BTC/USDT:USDT │     26 │          1.7 │          29.611 │         2.96 │     16:28:00 │   22     0     4  84.6 │
+│         TOTAL │     26 │          1.7 │          29.611 │         2.96 │     16:28:00 │   22     0     4  84.6 │
+└───────────────┴────────┴──────────────┴─────────────────┴──────────────┴──────────────┴────────────────────────┘
+                                         LEFT OPEN TRADES REPORT                                          
+┏━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  Pair ┃ Trades ┃ Avg Profit % ┃ Tot Profit USDT ┃ Tot Profit % ┃ Avg Duration ┃  Win  Draw  Loss  Win% ┃
+┡━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ TOTAL │      0 │          0.0 │           0.000 │          0.0 │         0:00 │    0     0     0     0 │
+└───────┴────────┴──────────────┴─────────────────┴──────────────┴──────────────┴────────────────────────┘
+                                                ENTER TAG STATS                                                
+┏━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Enter Tag ┃ Entries ┃ Avg Profit % ┃ Tot Profit USDT ┃ Tot Profit % ┃ Avg Duration ┃  Win  Draw  Loss  Win% ┃
+┡━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
+│      long │      20 │          1.2 │          15.711 │         1.57 │     15:24:00 │   16     0     4  80.0 │
+│     short │       6 │         3.38 │          13.899 │         1.39 │     20:00:00 │    6     0     0   100 │
+│     TOTAL │      26 │          1.7 │          29.611 │         2.96 │     16:28:00 │   22     0     4  84.6 │
+└───────────┴─────────┴──────────────┴─────────────────┴──────────────┴──────────────┴────────────────────────┘
+                                                  EXIT REASON STATS                                                  
+┏━━━━━━━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃       Exit Reason ┃ Exits ┃ Avg Profit % ┃ Tot Profit USDT ┃ Tot Profit % ┃ Avg Duration ┃  Win  Draw  Loss  Win% ┃
+┡━━━━━━━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ strong_exit_short │    11 │         2.73 │          19.988 │          2.0 │     18:16:00 │   11     0     0   100 │
+│  strong_exit_long │    15 │         0.94 │           9.623 │         0.96 │     15:08:00 │   11     0     4  73.3 │
+│             TOTAL │    26 │          1.7 │          29.611 │         2.96 │     16:28:00 │   22     0     4  84.6 │
+└───────────────────┴───────┴──────────────┴─────────────────┴──────────────┴──────────────┴────────────────────────┘
+                                                                 MIXED TAG STATS                                                                 
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                      Enter Tag ┃ Exit Reason ┃ Trades ┃ Avg Profit % ┃ Tot Profit USDT ┃ Tot Profit % ┃ Avg Duration ┃  Win  Draw  Loss  Win% ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ ('short', 'strong_exit_short') │             │      6 │         3.38 │          13.899 │         1.39 │     20:00:00 │    6     0     0   100 │
+│   ('long', 'strong_exit_long') │             │     15 │         0.94 │           9.623 │         0.96 │     15:08:00 │   11     0     4  73.3 │
+│  ('long', 'strong_exit_short') │             │      5 │         1.95 │           6.088 │         0.61 │     16:12:00 │    5     0     0   100 │
+│                          TOTAL │             │     26 │          1.7 │          29.611 │         2.96 │     16:28:00 │   22     0     4  84.6 │
+└────────────────────────────────┴─────────────┴────────┴──────────────┴─────────────────┴──────────────┴──────────────┴────────────────────────┘
+                   SUMMARY METRICS                    
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Metric                      ┃ Value                ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━┩
+│ Backtesting from            │ 2024-04-01 00:00:00  │
+│ Backtesting to              │ 2024-05-01 00:00:00  │
+│ Trading Mode                │ Isolated Futures     │
+│ Max open trades             │ 1                    │
+│                             │                      │
+│ Total/Daily Avg Trades      │ 26 / 0.87            │
+│ Starting balance            │ 1000 USDT            │
+│ Final balance               │ 1029.611 USDT        │
+│ Absolute profit             │ 29.611 USDT          │
+│ Total profit %              │ 2.96%                │
+│ CAGR %                      │ 42.62%               │
+│ Sortino                     │ 134.56               │
+│ Sharpe                      │ 18.54                │
+│ Calmar                      │ 3674.75              │
+│ Profit factor               │ 26.91                │
+│ Expectancy (Ratio)          │ 1.14 (3.99)          │
+│ Avg. daily profit %         │ 0.10%                │
+│ Avg. stake amount           │ 66.425 USDT          │
+│ Total trade volume          │ 3458.877 USDT        │
+│                             │                      │
+│ Long / Short                │ 20 / 6               │
+│ Total profit Long %         │ 1.57%                │
+│ Total profit Short %        │ 1.39%                │
+│ Absolute profit Long        │ 15.711 USDT          │
+│ Absolute profit Short       │ 13.899 USDT          │
+│                             │                      │
+│ Best Pair                   │ BTC/USDT:USDT 2.96%  │
+│ Worst Pair                  │ BTC/USDT:USDT 2.96%  │
+│ Best trade                  │ BTC/USDT:USDT 4.37%  │
+│ Worst trade                 │ BTC/USDT:USDT -0.81% │
+│ Best day                    │ 3.111 USDT           │
+│ Worst day                   │ -0.527 USDT          │
+│ Days win/draw/lose          │ 20 / 7 / 3           │
+│ Avg. Duration Winners       │ 16:16:00             │
+│ Avg. Duration Loser         │ 17:30:00             │
+│ Max Consecutive Wins / Loss │ 13 / 1               │
+│ Rejected Entry signals      │ 0                    │
+│ Entry/Exit Timeouts         │ 0 / 0                │
+│                             │                      │
+│ Min balance                 │ 1001.838 USDT        │
+│ Max balance                 │ 1029.611 USDT        │
+│ Max % of account underwater │ 0.05%                │
+│ Absolute Drawdown (Account) │ 0.05%                │
+│ Absolute Drawdown           │ 0.527 USDT           │
+│ Drawdown high               │ 27.55 USDT           │
+│ Drawdown low                │ 27.023 USDT          │
+│ Drawdown Start              │ 2024-04-25 18:00:00  │
+│ Drawdown End                │ 2024-04-26 12:00:00  │
+│ Market change               │ 128.88%              │
+└─────────────────────────────┴──────────────────────┘
+
+Backtested 2024-04-01 00:00:00 -> 2024-05-01 00:00:00 | Max open trades : 1
+                                                               STRATEGY SUMMARY                                                                
+┏━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┓
+┃               Strategy ┃ Trades ┃ Avg Profit % ┃ Tot Profit USDT ┃ Tot Profit % ┃ Avg Duration ┃  Win  Draw  Loss  Win% ┃          Drawdown ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━┩
+│ ExampleLSTMStrategy_v2 │     26 │         1.70 │          29.611 │         2.96 │     16:28:00 │   22     0     4  84.6 │ 0.527 USDT  0.05% │
+└────────────────────────┴────────┴──────────────┴─────────────────┴──────────────┴──────────────┴────────────────────────┴───────────────────┘

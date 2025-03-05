@@ -67,7 +67,7 @@ class ExampleLSTMStrategy_v2(IStrategy):
     can_short = True
     use_exit_signal = True
     process_only_new_candles = True
-    use_custom_stoploss = True
+    use_custom_stoploss = False
 
     startup_candle_count = 20
 
@@ -222,7 +222,14 @@ class ExampleLSTMStrategy_v2(IStrategy):
         return dataframe
 
     def populate_entry_trend(self, df: DataFrame, metadata: dict) -> DataFrame:
-        confidence_threshold = 0.45  # Reduced to allow more trades
+        confidence_threshold = 0.50  # Ensuring sufficient confidence for entries
+
+        # ✅ Ensure `enter_short` and `enter_long` columns exist before assignment
+        df["enter_short"] = 0
+        df["enter_long"] = 0
+
+        logger.info("🔍 ENTER SHORT SIGNALS CHECK BEFORE ENTRY")
+        logger.info(df[df["enter_short"] == 1])
 
         # ✅ Adaptive Trend Thresholds
         df["dynamic_T_threshold"] = df["atr"] * 0.002
@@ -230,15 +237,15 @@ class ExampleLSTMStrategy_v2(IStrategy):
         df["valid_volume"] = df["vol_rank"] > 0.10  # More permissive
 
         enter_long_conditions = [
-            df["do_predict"] == 1,  
-            df["T"] > 0,  # ✅ Allow weaker bullish trends (was filtering small trends before)
-            df["valid_volume"] == True,  
+            df["do_predict"] == 1,
+            df["T"] > 0,  # ✅ Allow weaker bullish trends
+            df["valid_volume"] == True,
             df["prediction_confidence"] > confidence_threshold
         ]
 
         enter_short_conditions = [
-            df["do_predict"] == 1,  
-            df["T"] < -df["dynamic_T_threshold"],
+            df["do_predict"] == 1,
+            df["T"] < -df["dynamic_T_threshold"] * 0.8,  # **More permissive for shorts**
             df["valid_volume"] == True,
             df["prediction_confidence"] > confidence_threshold
         ]
@@ -246,41 +253,74 @@ class ExampleLSTMStrategy_v2(IStrategy):
         df.loc[reduce(lambda x, y: x & y, enter_long_conditions), ["enter_long", "enter_tag"]] = (1, "long")
         df.loc[reduce(lambda x, y: x & y, enter_short_conditions), ["enter_short", "enter_tag"]] = (1, "short")
 
+        # ✅ Log entry counts
+        logger.info(f"✅ Total enter_long signals: {df['enter_long'].sum()}")
+        logger.info(f"✅ Total enter_short signals: {df['enter_short'].sum()}")
+
+        logger.info("✅ ENTER SHORT SIGNALS CHECK AFTER ENTRY")
+        logger.info(df[df["enter_short"] == 1])
+
         return df
 
     def populate_exit_trend(self, df: DataFrame, metadata: dict) -> DataFrame:
-        confidence_threshold = 0.45  # Reduced to allow more exits
+        """
+        Defines exit conditions for long and short trades, ensuring exits actually trigger.
+        """
+        confidence_threshold = 0.35  # Lowered to allow more exits
 
-        # ✅ Compute dynamic exit threshold
-        df["dynamic_exit_threshold"] = df["&-s_target"].rolling(2).mean() + (df["atr"] * 0.0008)
-        
-        # ✅ Faster trend change detection
-        df["trend_change"] = (df["T"].diff(1).abs() > df["T"].rolling(2).std())
+        # ✅ Ensure exit signals exist
+        df["exit_short"] = 0
+        df["exit_long"] = 0
 
-        # ✅ Ensure profit-based exit exists
-        if "current_profit" in df.columns:
-            df["profit_based_exit"] = (df["current_profit"] > 0.005) & (df["T"] < 0.005)  # ✅ Reduced from 1.5%
-        else:
-            df["profit_based_exit"] = False  
+        # ✅ **Fix Active Trade Tracking**
+        df["active_short_trade"] = (df["enter_short"].cumsum() - df["exit_short"].cumsum()) > 0
+        df["active_long_trade"] = (df["enter_long"].cumsum() - df["exit_long"].cumsum()) > 0
 
+        logger.info("🔍 Active Trades Summary: Shorts: %d | Longs: %d", df["active_short_trade"].sum(), df["active_long_trade"].sum())
+
+        # ✅ **Compute Dynamic Exit Threshold**
+        df["dynamic_exit_threshold"] = df["&-s_target"].rolling(5).mean() + (df["atr"] * 0.0015)
+
+        # ✅ **Adjusted Time-Based Exit**
+        df["timed_exit_long"] = ((df["active_long_trade"]) & (df["T"].rolling(50).max().fillna(0) > 0.05)).astype(int)
+        df["timed_exit_short"] = ((df["active_short_trade"]) & (df["T"].rolling(50).min().fillna(0) < -0.05)).astype(int)
+
+        # ✅ **Updated Stronger Exit Conditions for LONGS**
         strong_exit_long_conditions = [
             df["do_predict"] >= 0,
-            df["trend_change"] == True,  
-            df["&-s_target"] < df["dynamic_exit_threshold"],  
-            (df["T"] < 0.01) | df["profit_based_exit"],  
+            df["T"] < 0.05,  # ✅ Relaxed exit trigger
+            df["timed_exit_long"],  # ✅ This is now the primary exit
+            df["active_long_trade"],
             df["prediction_confidence"] > confidence_threshold
         ]
 
+        # ✅ **Updated Stronger Exit Conditions for SHORTS**
         strong_exit_short_conditions = [
             df["do_predict"] >= 0,
-            df["trend_change"] == True,  
-            df["&-s_target"] > df["dynamic_exit_threshold"],
-            (df["T"] > -0.05) | df["profit_based_exit"],  # ✅ Lowered from -0.03
+            df["T"] > -0.10,  # ✅ Loosened exit trigger
+            df["timed_exit_short"],  # ✅ This is now the primary exit
+            df["active_short_trade"],
             df["prediction_confidence"] > confidence_threshold
         ]
 
         df.loc[reduce(lambda x, y: x & y, strong_exit_long_conditions), ["exit_long", "exit_tag"]] = (1, "strong_exit_long")
         df.loc[reduce(lambda x, y: x & y, strong_exit_short_conditions), ["exit_short", "exit_tag"]] = (1, "strong_exit_short")
+
+        # ✅ **Debugging: Active Trades**
+        logger.info("🔍 Sample Active Long Trades:")
+        logger.info(df[["date", "enter_long", "exit_long", "active_long_trade"]].tail(30))
+        
+        logger.info("🔍 Sample Active Short Trades:")
+        logger.info(df[["date", "enter_short", "exit_short", "active_short_trade"]].tail(30))
+
+        # ✅ **Debugging: Exit Conditions**
+        logger.info("✅ Exit Conditions Triggered:")
+        logger.info("🔹 timed_exit_long: %d", df['timed_exit_long'].sum())
+        logger.info("🔹 timed_exit_short: %d", df['timed_exit_short'].sum())
+
+        # ✅ **Debugging: Final Exit Signal Counts**
+        logger.info("✅ Total exit_long signals: %d", df["exit_long"].sum())
+        logger.info("✅ Total exit_short signals: %d", df["exit_short"].sum())
 
         return df
 
