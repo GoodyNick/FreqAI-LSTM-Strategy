@@ -370,7 +370,3 @@ class PyTorchLSTMTrainer:
         """
         logger.info(f"💾 Saving trained model to: {save_path}")
         torch.save(self.model.state_dict(), save_path)
-
-
-
-

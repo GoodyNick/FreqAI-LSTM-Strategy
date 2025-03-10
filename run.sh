@@ -4,7 +4,7 @@
 STRATEGY="ExampleLSTMStrategy_v2"
 MODEL="PyTorchLSTMRegressor_v2"
 CONFIG="./user_data/configs/config-torch-lstm_v2.json"
-TIMERANGE="20240401-20240501"
+TIMERANGE="20240301-20240401"
 PAIR="BTC/USDT:USDT"
 HYPEROPTLOSS="SharpeHyperOptLoss"
 SPACES="buy sell"
@@ -27,6 +27,8 @@ fi
 if [[ "$MODE" == "backtest" ]]; then
     echo "🔄 Running Backtest..."
     freqtrade backtesting -s "$STRATEGY" --freqaimodel "$MODEL" -c "$CONFIG" --timerange="$TIMERANGE" 2>&1 | tee ./user_data/backtest_results.txt
+    echo "📊 Plotting DataFrame..."
+    freqtrade plot-dataframe --strategy "$STRATEGY" --freqaimodel "$MODEL" --timerange="$TIMERANGE" --config "$CONFIG" --pair "$PAIR"
 
 # ✅ Plotting
 elif [[ "$MODE" == "plot" ]]; then
