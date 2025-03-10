@@ -101,11 +101,11 @@
   "freqai": {
       "enabled": true,
       "identifier": "torch-lstm12",
-      "train_period_days": 180,
+      "train_period_days": 365,
       "fit_live_predictions_candles": 0,
       "force_model_refresh": false,
       "model_persistence": true,
-      "backtest_period_days": 60,
+      "backtest_period_days": 30,
       "expiration_hours": 4,
       "live_retrain_hours": 4,
       "purge_old_models": 2,
@@ -124,11 +124,11 @@
           ],
           "label_period_candles": 12,
           "include_shifted_candidates": 12,
-          "DI_threshold": 5.0,
+          "DI_threshold": 3.0,
           "weight_factor": 0.5,
           "principal_component_analysis": true,
           "num_pca_components": 20,
-          "use_SVM_to_remove_outliers": false,      
+          "use_SVM_to_remove_outliers": true,      
           "indicator_periods_candles": [
               5,
               10,
@@ -148,9 +148,9 @@
           "lag_amount": 24 
       },
       "data_split_parameters": {
-          "test_size": 0.2,
+          "test_size": 0.30,
           "random_state": 42,
-          "shuffle": false
+          "shuffle": true
       },
       "model_training_parameters": {
           "learning_rate": 0.001,
@@ -160,13 +160,13 @@
           "enable_feature_importance": false,
           "enable_early_stopping": true,
           "trainer_kwargs": {
-              "batch_size": 64,
+              "batch_size": 48,
               "n_epochs": 100
           }
       },
       "model_kwargs": {
           "num_lstm_layers": 5,
-          "hidden_dim": 384,
+          "hidden_dim": 256,
           "dropout_percent": 0.3,
           "window_size": 40,  // ✅ Matches sequence input size for LSTM
           "input_dim": 10,    // ✅ Defines how many features per timestep

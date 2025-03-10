@@ -42,6 +42,7 @@ class ExampleLSTMStrategy_v2(IStrategy):
                 "True Label": {"color": "blue", "plot_type": "line"},  # Rename T to "True Label"
                 "Prediction": {"color": "red", "plot_type": "line"},  # Rename "&-s_target" to "Prediction"
                 "Avg Prediction": {"color": "green", "plot_type": "line"},  # Rename "&-s_target_mean" to "Avg Prediction"
+                "prediction_confidence": {"color": "orange", "plot_type": "line"},  # Plot prediction confidence
             },
         },
     }
@@ -70,54 +71,58 @@ class ExampleLSTMStrategy_v2(IStrategy):
     use_custom_stoploss = False
 
     startup_candle_count = 20
-
-    # Set to True to remove highly correlated features(enabling this causes 
-    # mismatch between features in trained models and backtest features).
-    # also, these should be enabled without using PCA
-    do_remove_highly_correlated_features = False
-    do_filter_important_features = False  
                                                 
     prediction_metrics_storage = []  # Class-level storage for all pairs
 
     def feature_engineering_expand_all(self, dataframe: pd.DataFrame, period: int, metadata: Dict, **kwargs):
         """
-        Expands features that benefit from multiple timeframes.
+        Expands all features for FreqAI while keeping feature count optimized.
         """
 
-        # ✅ Momentum & Trend Indicators (Expanded Over Timeframes)
-        dataframe["%-cci-period"] = ta.CCI(dataframe, timeperiod=20)
-        dataframe["%-rsi-period"] = ta.RSI(dataframe, timeperiod=10)
-        dataframe["%-momentum-period"] = ta.MOM(dataframe, timeperiod=4)
-        dataframe["%-ma-period"] = ta.SMA(dataframe, timeperiod=10)
-        dataframe["%-roc-period"] = ta.ROC(dataframe, timeperiod=2)
-        
-        # ✅ MACD
-        dataframe["%-macd-period"], dataframe["%-macdsignal-period"], dataframe["%-macdhist-period"] = ta.MACD(
-            dataframe['close'], slowperiod=12, fastperiod=26
-        )
+        # ✅ Key Technical Indicators (Retained)
+        dataframe["%-rsi-period"] = ta.RSI(dataframe, timeperiod=14)  # Momentum Strength
+        dataframe["%-roc-period"] = ta.ROC(dataframe, timeperiod=5)  # Trend Direction
 
-        # ✅ Bollinger Bands
-        bollinger = qtpylib.bollinger_bands(
-            qtpylib.typical_price(dataframe), window=period, stds=2.2
-        )
-        dataframe["bb_lowerband-period"] = bollinger["lower"]
-        dataframe["bb_middleband-period"] = bollinger["mid"]
-        dataframe["bb_upperband-period"] = bollinger["upper"]
+        # ✅ Bollinger Bands (Ensuring Calculation Before Use)
+        if "bb_upperband-period" not in dataframe or "bb_lowerband-period" not in dataframe:
+            bollinger = qtpylib.bollinger_bands(
+                qtpylib.typical_price(dataframe), window=period, stds=2.2
+            )
+            dataframe["bb_lowerband-period"] = bollinger["lower"]
+            dataframe["bb_middleband-period"] = bollinger["mid"]
+            dataframe["bb_upperband-period"] = bollinger["upper"]
+
         dataframe["%-bb_width-period"] = (
             dataframe["bb_upperband-period"] - dataframe["bb_lowerband-period"]
         ) / dataframe["bb_middleband-period"]
-        dataframe["%-close-bb_lower-period"] = dataframe["close"] / dataframe["bb_lowerband-period"]
 
-        # ✅ Fix NaNs in Expanded Features
-        expanded_features = [
-            "%-cci-period", "%-rsi-period", "%-momentum-period", "%-ma-period",
-            "%-roc-period", "%-macd-period", "%-macdsignal-period", "%-macdhist-period",
-            "bb_lowerband-period", "bb_upperband-period", "%-bb_width-period", "%-close-bb_lower-period"
+        # ✅ Temporarily Remove Lower-Impact Indicators (Can Reintroduce if Needed)
+        drop_columns = [
+            "%-cci-period", "%-momentum-period", "%-macd-period",
+            "%-macdsignal-period", "%-macdhist-period"
         ]
-        dataframe[expanded_features] = dataframe[expanded_features].bfill().fillna(0)  # ✅ Fix applied
+        dataframe.drop(columns=[col for col in drop_columns if col in dataframe.columns], inplace=True, errors="ignore")
 
-        if self.do_remove_highly_correlated_features:
-            dataframe = self.remove_highly_correlated_features(dataframe)
+        # ✅ Fix NaNs
+        dataframe.fillna(0, inplace=True)
+
+        # ✅ **Optimized Lag-Based Features**
+        lag_amount = 3  # ⬇ Reduced from 6 to 3
+        lag_features = ["close", "%-rsi-period"]  # **Limited to key trend indicators**
+
+        # ✅ Efficient lagging using `pd.concat()`
+        lagged_data = {f"{feature}_lag{lag}": dataframe[feature].shift(lag) for feature in lag_features for lag in range(1, lag_amount + 1)}
+        dataframe = pd.concat([dataframe, pd.DataFrame(lagged_data, index=dataframe.index)], axis=1)
+
+        # ✅ Fill NaNs from Lagged Features (Backfill to Avoid Data Loss)
+        dataframe.loc[:, dataframe.columns.str.contains("_lag")] = dataframe.loc[:, dataframe.columns.str.contains("_lag")].bfill()
+
+        # ✅ Apply Z-Score Normalization to **volatile features only**
+        zscore_columns = ["%-bb_width-period", "%-rsi-period", "%-roc-period"]
+        for col in zscore_columns:
+            dataframe.loc[:, f"{col}-zscore"] = pd.Series(zscore(dataframe[col]), index=dataframe.index).fillna(0)
+
+        logger.info(f"🔍 Strict feature selection applied. Total features: {len(dataframe.columns)}")
 
         return dataframe
 
@@ -143,6 +148,9 @@ class ExampleLSTMStrategy_v2(IStrategy):
         dataframe.loc[:, "%-rolling_volatility"] = dataframe["close"].rolling(window=24).std().bfill()
         dataframe.loc[:, "%-rolling_mean"] = dataframe["close"].rolling(window=24).mean().bfill()
 
+        # ✅ Replaced Rolling Mean with EMA
+        dataframe.loc[:, "%-ema_trend"] = ta.EMA(dataframe, timeperiod=24).bfill()
+
         # ✅ CUSUM (Trend Break Detector - Should NOT be expanded)
         def get_cusum(series):
             series_mean = series.mean()
@@ -150,7 +158,7 @@ class ExampleLSTMStrategy_v2(IStrategy):
 
         dataframe.loc[:, "%-cusum_close"] = get_cusum(dataframe["close"]).fillna(0)
 
-        # ✅ Hurst Exponent (Trend Strength - Fixed NaNs)
+        # ✅ Optimized Hurst Exponent (Trend Strength - Smoothed)
         def hurst_exponent(ts, max_lag=20):
             if len(ts) < max_lag:
                 return np.nan
@@ -159,9 +167,9 @@ class ExampleLSTMStrategy_v2(IStrategy):
             return np.polyfit(np.log(lags), np.log(tau), 1)[0]
 
         dataframe.loc[:, "%-hurst"] = dataframe["close"].rolling(window=72).apply(hurst_exponent, raw=True)
-        dataframe.loc[:, "%-hurst"] = dataframe["%-hurst"].fillna(dataframe["%-hurst"].median())
+        dataframe.loc[:, "%-hurst_smooth"] = dataframe["%-hurst"].rolling(window=10).mean().bfill()
 
-        # ✅ Fourier Transform (Fixed NaNs)
+        # ✅ Fourier Transform (Fixed NaNs & Normalized)
         def compute_fourier(series, n_components=3):
             if len(series) < 72:
                 return np.nan
@@ -171,10 +179,13 @@ class ExampleLSTMStrategy_v2(IStrategy):
         dataframe.loc[:, "%-fourier_price"] = dataframe["close"].rolling(window=72).apply(compute_fourier, raw=True)
         dataframe.loc[:, "%-fourier_price"] = dataframe["%-fourier_price"].fillna(dataframe["%-fourier_price"].median())
 
-        # ✅ Fix Z-Score Normalization NaNs (Apply AFTER filling raw features)
-        zscore_columns = ["%-rolling_volatility", "%-rolling_mean", "%-cusum_close", "%-hurst", "%-fourier_price"]
+        # ✅ Normalize Fourier Features using ATR
+        dataframe.loc[:, "%-fourier_price_norm"] = dataframe["%-fourier_price"] / (dataframe["atr"] + 1e-6)
+
+        # ✅ Apply Z-Score Normalization to **volatile features only**
+        zscore_columns = ["%-rolling_volatility", "%-rolling_mean", "%-fourier_price_norm"]
         for col in zscore_columns:
-            dataframe.loc[:, f"{col}-zscore"] = pd.Series(zscore(dataframe[col]), index=dataframe.index).fillna(0)  # ✅ Convert to Series
+            dataframe.loc[:, f"{col}-zscore"] = pd.Series(zscore(dataframe[col]), index=dataframe.index).fillna(0)
 
         logger.info(f"🔍 Total features before model training: {len(dataframe.columns)}")
 
@@ -506,4 +517,3 @@ class ExampleLSTMStrategy_v2(IStrategy):
         columns_to_keep = [col for col in dataframe.columns if not col.startswith("%") or col in important_features]
         
         return dataframe[columns_to_keep]
-
