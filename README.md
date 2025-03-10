@@ -1,6 +1,6 @@
 # FreqAI Strategy - AI-Driven Trading with LSTM
 
-![FreqAI](https://github.com/freqtrade/freqtrade/raw/develop/docs/static/img/freqai_diagram.png)
+[![FreqAI](https://www.freqtrade.io/en/stable/assets/freqai_algo.jpg)]
 
 ## Overview
 **FreqAI-Strategy** is an advanced **AI-driven trading strategy** built for [Freqtrade](https://www.freqtrade.io/en/stable/) using **Long Short-Term Memory (LSTM) neural networks**. This strategy is designed to:
