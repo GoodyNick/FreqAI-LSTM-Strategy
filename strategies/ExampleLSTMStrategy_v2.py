@@ -44,6 +44,15 @@ class ExampleLSTMStrategy_v2(IStrategy):
                 "Avg Prediction": {"color": "green", "plot_type": "line"},  # Rename "&-s_target_mean" to "Avg Prediction"
                 "prediction_confidence": {"color": "orange", "plot_type": "line"},  # Plot prediction confidence
             },
+            "Indicators": {
+                "atr": {"color": "blue", "plot_type": "line"},
+            },
+            "Normalized Indicators": {
+                "rolling_trend": {"color": "blue", "plot_type": "line"},
+                "vol_rank": {"color": "orange", "plot_type": "line"},
+                "dynamic_long_threshold": {"color": "green", "plot_type": "line"},
+                "dynamic_short_threshold": {"color": "red", "plot_type": "line"},
+            },
         },
     }
 
@@ -68,7 +77,7 @@ class ExampleLSTMStrategy_v2(IStrategy):
     can_short = True
     use_exit_signal = True
     process_only_new_candles = True
-    use_custom_stoploss = False
+    use_custom_stoploss = True
 
     startup_candle_count = 20
                                                 
@@ -283,14 +292,21 @@ class ExampleLSTMStrategy_v2(IStrategy):
         df["dynamic_exit_threshold"] = df["&-s_target"].rolling(5).mean() + (df["atr"] * (0.0015 + df["atr_scaled"] * 0.0015))
 
         # ✅ **Adjusted Time-Based Exit (Without Lookahead Bias)**
-        df["timed_exit_long"] = ((df["active_long_trade"]) & (df["rolling_trend"].rolling(50).max().fillna(0) > 0.05)).astype(int)
-        df["timed_exit_short"] = ((df["active_short_trade"]) & (df["rolling_trend"].rolling(50).min().fillna(0) < -0.05)).astype(int)
+        df["timed_exit_long"] = (
+            df["active_long_trade"] &
+            (df["rolling_trend"].rolling(30).max().fillna(0) > 0.04)  # ✅ Relaxed trend threshold
+        ).astype(int)
+
+        df["timed_exit_short"] = (
+            df["active_short_trade"] &
+            (df["rolling_trend"].rolling(30).min().fillna(0) < -0.04)  # ✅ Relaxed trend threshold
+        ).astype(int)
 
         strong_exit_long_conditions = [
             df["do_predict"] >= 0,
             df["&-s_target"] < df["dynamic_exit_threshold"] * (1 - df["vol_rank"]),  # ✅ Adjust exits based on volume
             df["rolling_trend"] < 0,  # ✅ Confirms downtrend
-            df["timed_exit_long"],
+            df["timed_exit_long"] | (df["vol_rank"] > 0.85),  # ✅ Either timed exit OR high volume triggers exit
             df["active_long_trade"],
             df["prediction_confidence"] > confidence_threshold
         ]
@@ -299,7 +315,7 @@ class ExampleLSTMStrategy_v2(IStrategy):
             df["do_predict"] >= 0,
             df["&-s_target"] > df["dynamic_exit_threshold"] * (1 + df["vol_rank"]),  # ✅ Adjust exits based on volume
             df["rolling_trend"] > 0,  # ✅ Confirms uptrend
-            df["timed_exit_short"],
+            df["timed_exit_short"] | (df["vol_rank"] > 0.85),  # ✅ Either timed exit OR high volume triggers exit
             df["active_short_trade"],
             df["prediction_confidence"] > confidence_threshold
         ]
@@ -481,22 +497,29 @@ class ExampleLSTMStrategy_v2(IStrategy):
 
         logger.info(f"✅ Prediction metrics saved to {output_path}")
 
-    def remove_highly_correlated_features(self, dataframe, threshold=0.85):
+    def remove_highly_correlated_features(self, dataframe: pd.DataFrame, threshold: float = 0.85) -> pd.DataFrame:
         """
-        Drops one feature from each highly correlated pair, except essential features.
+        Removes features that are highly correlated with each other.
         """
-        essential_features = {"high", "low", "close", "open", "volume"}  # Features FreqAI depends on
 
-        corr_matrix = dataframe.corr().abs()
+        # ✅ Ensure only numeric columns are used for correlation calculation
+        numeric_df = dataframe.select_dtypes(include=[np.number])
+
+        # ✅ Compute absolute correlation matrix
+        corr_matrix = numeric_df.corr().abs()
+
+        # ✅ Identify upper triangle of correlation matrix
         upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
 
-        to_drop = [column for column in upper.columns if any(upper[column] > threshold) and column not in essential_features]
+        # ✅ Find features to drop
+        to_drop = [column for column in upper.columns if any(upper[column] > threshold)]
 
-        if to_drop:
-            logger.info(f"Dropping {len(to_drop)} highly correlated features: {to_drop}")
-            dataframe = dataframe.drop(columns=to_drop)
+        logger.info(f"🔍 Removing {len(to_drop)} highly correlated features: {to_drop}")
 
-        return dataframe 
+        # ✅ Drop correlated columns from original dataframe
+        dataframe.drop(columns=to_drop, inplace=True, errors="ignore")
+
+        return dataframe
           
     def filter_important_features(self, dataframe):
         """

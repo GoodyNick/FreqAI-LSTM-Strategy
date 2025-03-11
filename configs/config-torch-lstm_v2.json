@@ -127,6 +127,7 @@
           "DI_threshold": 3.0,
           "weight_factor": 0.5,
           "principal_component_analysis": true,
+          "remove_highly_correlated_features": true,
           "num_pca_components": 20,
           "use_SVM_to_remove_outliers": true,      
           "indicator_periods_candles": [

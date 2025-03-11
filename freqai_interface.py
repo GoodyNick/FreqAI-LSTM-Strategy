@@ -536,25 +536,24 @@ class IFreqaiModel(ABC):
             )
 
     def define_data_pipeline(self, threads=-1) -> Pipeline:
+        """
+        Define the original feature selection pipeline, without correlation filtering.
+        """
+        logger.info("🚀 Reverting to original define_data_pipeline() in freqai_interface.py")
+
         ft_params = self.freqai_info["feature_parameters"]
-
-        def log_feature_count(X, **kwargs):
-            logger.info(f"🔍 Feature Count After Step: {X.shape[1]}")
-            return X  
-
         pipe_steps = [
-            ("log_initial", SKLearnWrapper(FunctionTransformer(log_feature_count))),  
-            ("scaler", SKLearnWrapper(MinMaxScaler(feature_range=(-1, 1)), reset=True)),  
-            ("log_after_scaling", SKLearnWrapper(FunctionTransformer(log_feature_count))),  
+            ("const", ds.VarianceThreshold(threshold=0)),
+            ("scaler", SKLearnWrapper(MinMaxScaler(feature_range=(-1, 1))))
         ]
 
+        # ✅ PCA Feature Reduction
         if ft_params.get("principal_component_analysis", False):
             logger.info("✅ Applying PCA to maintain feature consistency.")
-            pipe_steps.append(("pca", ds.PCA(n_components=0.999)))  
-            pipe_steps.append(("post-pca-scaler", SKLearnWrapper(MinMaxScaler(feature_range=(-1, 1)), reset=True)))  
-        else:
-            logger.info("❌ PCA is DISABLED. Keeping raw features.")
+            pipe_steps.append(("pca", ds.PCA(n_components=0.999)))
+            pipe_steps.append(("post-pca-scaler", SKLearnWrapper(MinMaxScaler(feature_range=(-1, 1)))))
 
+        # ✅ Other filtering steps (SVM, DBSCAN, Noise Reduction)
         if ft_params.get("use_SVM_to_remove_outliers", False):
             svm_params = ft_params.get("svm_params", {"shuffle": False, "nu": 0.01})
             pipe_steps.append(("svm", ds.SVMOutlierExtractor(**svm_params)))

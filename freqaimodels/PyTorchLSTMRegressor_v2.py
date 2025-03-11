@@ -11,6 +11,7 @@ from freqtrade.freqai.data_kitchen import FreqaiDataKitchen
 from freqtrade.freqai.torch.PyTorchDataConvertor import PyTorchDataConvertor, DefaultPyTorchDataConvertor
 from freqtrade.freqai.torch.PyTorchLSTMModel_v2 import PyTorchLSTMModel
 from freqtrade.freqai.torch.PyTorchModelTrainer_v2 import PyTorchLSTMTrainer
+from datasieve.pipeline import Pipeline
 
 logger = logging.getLogger(__name__)
 
@@ -24,14 +25,21 @@ def set_seed(seed=42):
 
 set_seed(42)
 
+from freqtrade.freqai.freqai_interface import IFreqaiModel
+from datasieve.transforms import SKLearnWrapper
+
 class PyTorchLSTMRegressor_v2(BasePyTorchRegressor):
+
     @property
     def data_convertor(self) -> PyTorchDataConvertor:
         return DefaultPyTorchDataConvertor(target_tensor_type=torch.float)
 
     def __init__(self, model_training_parameters=None, model_kwargs=None, config=None):
-        model_training_parameters = model_training_parameters or {}
+
+        # ✅ Ensure model_kwargs and model_training_parameters are dictionaries
         model_kwargs = model_kwargs or {}
+        model_training_parameters = model_training_parameters or {}
+
         super().__init__(config=config)
 
         self.window_size = model_kwargs.get("window_size", config["freqai"]["model_kwargs"].get("window_size", 24))
@@ -108,32 +116,4 @@ class PyTorchLSTMRegressor_v2(BasePyTorchRegressor):
         torch.save(self.model.state_dict(), model_path)
         logger.info(f"💾 Model saved at: {model_path}")
 
-        # ✅ Compute feature importance if enabled
-        if self.config["freqai"]["model_training_parameters"].get("enable_feature_importance", False):
-            logger.info("🔍 Computing feature importance scores")
-            self.compute_feature_importance(data_dictionary)
-
         return self.model
-
-    def compute_feature_importance(self, data_dictionary: Dict[str, pd.DataFrame], save_path="feature_importances.csv"):
-        """
-        Compute feature importance scores based on absolute weight magnitudes.
-        Saves results to a CSV file.
-        """
-        feature_names = data_dictionary["train_features"].columns.tolist()
-
-        # Extract model weights from the first LSTM layer
-        with torch.no_grad():
-            first_layer_weights = self.model.lstm_layers[0].weight_ih_l0.abs().sum(dim=0).cpu().numpy()
-
-        # Normalize importance scores
-        importance_scores = first_layer_weights / first_layer_weights.sum()
-
-        # Store as DataFrame and save
-        df = pd.DataFrame({"Feature": feature_names, "Importance": importance_scores})
-        df = df.sort_values(by="Importance", ascending=False)
-
-        output_path = os.path.join(self.config["user_data_dir"], save_path)
-        df.to_csv(output_path, index=False)
-
-        logger.info(f"✅ Feature importance scores saved to {output_path}")
