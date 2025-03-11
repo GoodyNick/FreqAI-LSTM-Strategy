@@ -45,7 +45,7 @@ class ExampleLSTMStrategy_v2(IStrategy):
                 "prediction_confidence": {"color": "orange", "plot_type": "line"},  # Plot prediction confidence
             },
             "Indicators": {
-                "atr": {"color": "blue", "plot_type": "line"},
+                "atr_scaled": {"color": "blue", "plot_type": "line"},
             },
             "Normalized Indicators": {
                 "rolling_trend": {"color": "blue", "plot_type": "line"},
@@ -131,7 +131,7 @@ class ExampleLSTMStrategy_v2(IStrategy):
         for col in zscore_columns:
             dataframe.loc[:, f"{col}-zscore"] = pd.Series(zscore(dataframe[col]), index=dataframe.index).fillna(0)
 
-        logger.info(f"🔍 Strict feature selection applied. Total features: {len(dataframe.columns)}")
+        # logger.info(f"🔍 Strict feature selection applied. Total features: {len(dataframe.columns)}")
 
         return dataframe
 
@@ -219,17 +219,29 @@ class ExampleLSTMStrategy_v2(IStrategy):
         # ✅ Compute Rolling Trend Indicator
         dataframe["rolling_trend"] = dataframe["close"].pct_change(10).rolling(5).mean().fillna(0)
 
-        # ✅ Compute ATR percentiles for dynamic scaling
-        atr_percentile_25 = dataframe['atr'].rolling(100).quantile(0.25)
-        atr_percentile_75 = dataframe['atr'].rolling(100).quantile(0.75)
-        dataframe["atr_scaled"] = (dataframe["atr"] - atr_percentile_25) / (atr_percentile_75 - atr_percentile_25)
+        # ✅ Standardize ATR
+        dataframe["atr_scaled"] = (dataframe["atr"] - dataframe["atr"].rolling(100).min()) / \
+                                (dataframe["atr"].rolling(100).max() - dataframe["atr"].rolling(100).min())
         dataframe["atr_scaled"] = dataframe["atr_scaled"].clip(0, 1)  # Normalize to range [0, 1]
+
+        # ✅ Normalize Rolling Trend
+        dataframe["rolling_trend_scaled"] = (dataframe["rolling_trend"] - dataframe["rolling_trend"].rolling(100).min()) / \
+                                            (dataframe["rolling_trend"].rolling(100).max() - dataframe["rolling_trend"].rolling(100).min())
+        dataframe["rolling_trend_scaled"] = dataframe["rolling_trend_scaled"].clip(0, 1)  # Normalize to [0, 1]
 
         dataframe = self.freqai.start(dataframe, metadata, self)          
 
         # ✅ Compute dynamic thresholds once (to be used in trade logic)
         dataframe["dynamic_long_threshold"] = dataframe["&-s_target_mean"] + dataframe["&-s_target_std"] * dataframe["vol_rank"]
         dataframe["dynamic_short_threshold"] = dataframe["&-s_target_mean"] - dataframe["&-s_target_std"] * dataframe["vol_rank"]
+        dataframe["confidence_threshold"] = 0.30 + dataframe["atr_scaled"] * 0.20
+        dataframe["rolling_trend_threshold"] = dataframe["rolling_trend_scaled"].rolling(100).quantile(0.5) * 0.5
+        dataframe["dynamic_exit_threshold"] = (
+            dataframe["&-s_target"].rolling(5).mean() +
+            dataframe["atr_scaled"] * dataframe["&-s_target_std"] * (1 + dataframe["vol_rank"] * 0.5)
+        )
+        dataframe["exit_trend_threshold"] = dataframe["rolling_trend_scaled"].rolling(50).quantile(0.5) * 0.7
+
 
         """
         ✅ Keeping `T` for Plotting Purposes Only (Not Used in Trade Logic)
@@ -241,11 +253,10 @@ class ExampleLSTMStrategy_v2(IStrategy):
 
         self.compute_prediction_metrics(dataframe, metadata)
         self.save_prediction_metrics()
-        
+
         return dataframe
 
     def populate_entry_trend(self, df: DataFrame, metadata: dict) -> DataFrame:
-        confidence_threshold = 0.50  # Ensuring sufficient confidence for entries
 
         # ✅ Ensure `enter_short` and `enter_long` columns exist before assignment
         df["enter_short"] = 0
@@ -255,18 +266,18 @@ class ExampleLSTMStrategy_v2(IStrategy):
 
         enter_long_conditions = [
             df["do_predict"] == 1,
-            df["&-s_target"] > df["dynamic_long_threshold"],  # ✅ Now reusing precomputed value
-            df["rolling_trend"] > 0,  # ✅ Confirms an uptrend
-            df["valid_volume"] == True,
-            df["prediction_confidence"] > confidence_threshold
+            df["&-s_target"] > df["dynamic_long_threshold"],
+            df["rolling_trend_scaled"] > df["rolling_trend_threshold"],  # Dynamic
+            df["vol_rank"] > 0.10,  # Ensures liquidity
+            df["prediction_confidence"] > df["confidence_threshold"]  # Scaled confidence
         ]
 
         enter_short_conditions = [
             df["do_predict"] == 1,
-            df["&-s_target"] < df["dynamic_short_threshold"],  # ✅ Now reusing precomputed value
-            df["rolling_trend"] < 0,  # ✅ Confirms a downtrend
-            df["valid_volume"] == True,
-            df["prediction_confidence"] > confidence_threshold
+            df["&-s_target"] < df["dynamic_short_threshold"],
+            df["rolling_trend_scaled"] < df["rolling_trend_threshold"],  # Dynamic
+            df["vol_rank"] > 0.10,
+            df["prediction_confidence"] > df["confidence_threshold"]
         ]
 
         df.loc[reduce(lambda x, y: x & y, enter_long_conditions), ["enter_long", "enter_tag"]] = (1, "long")
@@ -288,9 +299,6 @@ class ExampleLSTMStrategy_v2(IStrategy):
         df["active_short_trade"] = (df["enter_short"].cumsum() - df["exit_short"].cumsum()) > 0
         df["active_long_trade"] = (df["enter_long"].cumsum() - df["exit_long"].cumsum()) > 0
 
-        # ✅ **Compute Dynamic Exit Threshold**
-        df["dynamic_exit_threshold"] = df["&-s_target"].rolling(5).mean() + (df["atr"] * (0.0015 + df["atr_scaled"] * 0.0015))
-
         # ✅ **Adjusted Time-Based Exit (Without Lookahead Bias)**
         df["timed_exit_long"] = (
             df["active_long_trade"] &
@@ -299,26 +307,42 @@ class ExampleLSTMStrategy_v2(IStrategy):
 
         df["timed_exit_short"] = (
             df["active_short_trade"] &
-            (df["rolling_trend"].rolling(30).min().fillna(0) < -0.04)  # ✅ Relaxed trend threshold
+            (df["rolling_trend"].rolling(20).min().fillna(0) < -0.02)  # ✅ More relaxed exit threshold
         ).astype(int)
+
+        logger.info(f"Exit Short Debug | do_predict: {df['do_predict'].sum()} | vol_rank: {df['vol_rank'].sum()} | timed_exit_short: {df['timed_exit_short'].sum()} | active_short_trade: {df['active_short_trade'].sum()}")
 
         strong_exit_long_conditions = [
             df["do_predict"] >= 0,
-            df["&-s_target"] < df["dynamic_exit_threshold"] * (1 - df["vol_rank"]),  # ✅ Adjust exits based on volume
-            df["rolling_trend"] < 0,  # ✅ Confirms downtrend
-            df["timed_exit_long"] | (df["vol_rank"] > 0.85),  # ✅ Either timed exit OR high volume triggers exit
+            df["&-s_target"] < df["dynamic_exit_threshold"],
+            df["rolling_trend_scaled"] < (df["exit_trend_threshold"]),  # Dynamic trend-based exit
+            df["timed_exit_long"] | (df["vol_rank"] > 0.75),
             df["active_long_trade"],
-            df["prediction_confidence"] > confidence_threshold
+            df["prediction_confidence"] > df["confidence_threshold"]
         ]
 
         strong_exit_short_conditions = [
             df["do_predict"] >= 0,
-            df["&-s_target"] > df["dynamic_exit_threshold"] * (1 + df["vol_rank"]),  # ✅ Adjust exits based on volume
-            df["rolling_trend"] > 0,  # ✅ Confirms uptrend
-            df["timed_exit_short"] | (df["vol_rank"] > 0.85),  # ✅ Either timed exit OR high volume triggers exit
+            df["&-s_target"] > df["dynamic_exit_threshold"],
+            df["rolling_trend_scaled"] > df["exit_trend_threshold"],  # Dynamic trend-based exit
+            df["timed_exit_short"] | (df["vol_rank"] > 0.75),
             df["active_short_trade"],
-            df["prediction_confidence"] > confidence_threshold
+            df["prediction_confidence"] > df["confidence_threshold"]
         ]
+        
+        # ✅ Check if any row meets ALL conditions
+        df["exit_short_temp"] = reduce(lambda x, y: x & y, strong_exit_short_conditions)
+        logger.info(f"Exit Short - Condition Met Count: {df['exit_short_temp'].sum()}")
+
+        logger.info(f"Exit Short Debug: "
+            f"do_predict: {df['do_predict'].sum()} | "
+            f"vol_rank: {df['vol_rank'].sum()} | "
+            f"timed_exit_short: {df['timed_exit_short'].sum()} | "
+            f"active_short_trade: {df['active_short_trade'].sum()} | "
+            f"dynamic_exit_threshold: {df['dynamic_exit_threshold'].sum()} | "
+            f"rolling_trend > 0: {(df['rolling_trend'] > 0).sum()} | "
+            f"confidence > {confidence_threshold}: {(df['prediction_confidence'] > confidence_threshold).sum()}"
+        )
 
         df.loc[reduce(lambda x, y: x & y, strong_exit_long_conditions), ["exit_long", "exit_tag"]] = (1, "strong_exit_long")
         df.loc[reduce(lambda x, y: x & y, strong_exit_short_conditions), ["exit_short", "exit_tag"]] = (1, "strong_exit_short")
