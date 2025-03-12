@@ -67,9 +67,9 @@ class PyTorchLSTMRegressor_v2(BasePyTorchRegressor):
         # Detect feature count dynamically
         n_features = train_features_np.shape[1]
         
-        # Reinitialize model if feature count changes
-        if self.trained_feature_count != n_features:
-            logger.warning(f"⚠ Feature count changed! Reinitializing model with {n_features} features.")
+        # ✅ Fix 1: Always Initialize `self.model`
+        if self.model is None or self.trained_feature_count != n_features:
+            logger.warning(f"⚠ Model was None or feature count changed! Reinitializing model with {n_features} features.")
             self.trained_feature_count = n_features
             self.model = PyTorchLSTMModel(
                 input_dim=n_features,
@@ -78,23 +78,15 @@ class PyTorchLSTMRegressor_v2(BasePyTorchRegressor):
                 dropout=self.dropout
             ).to(self.device)
 
-        # ✅ Correct `num_batches` calculation
-        num_batches = train_features_np.shape[0] // self.window_size
-
-        # ✅ Ensure we do not attempt to reshape more data than available
-        trimmed_size = num_batches * self.window_size
-        train_features_np = train_features_np[:trimmed_size]
-        train_labels_np = train_labels_np[:trimmed_size]
-
-        # ✅ Proper reshaping
-        train_features_np = train_features_np.reshape(num_batches, self.window_size, n_features)
-        train_labels_np = train_labels_np.reshape(num_batches, self.window_size, 1)
-
-        logger.info(f"✅ Feature dimensions after reshaping: {train_features_np.shape}")
-        logger.info(f"✅ Label dimensions after reshaping: {train_labels_np.shape}")
-
-        # train_features_tensor = torch.tensor(train_features_np, dtype=torch.float32).to(self.device)
-        # train_labels_tensor = torch.tensor(train_labels_np, dtype=torch.float32).to(self.device)
+        # ✅ Fix 2: Final Check Before Accessing `self.model.parameters()`
+        if self.model is None:
+            logger.error("🚨 self.model is unexpectedly None before optimizer initialization! Reinitializing...")
+            self.model = PyTorchLSTMModel(
+                input_dim=n_features,
+                output_dim=1,
+                num_layers=self.num_layers,
+                dropout=self.dropout
+            ).to(self.device)
 
         optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.lr, weight_decay=self.weight_decay)
         criterion = torch.nn.SmoothL1Loss()
