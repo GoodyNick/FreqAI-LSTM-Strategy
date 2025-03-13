@@ -222,10 +222,10 @@ class ExampleLSTMStrategy_v2(IStrategy):
 
         # ✅ Standardize ATR
         atr_window = 100
-        atr_min = dataframe["atr"].rolling(100).min()
-        atr_max = dataframe["atr"].rolling(100).max()
-        dataframe["atr_scaled"] = (dataframe["atr"] - atr_min) / (atr_max - atr_min + 1e-6)  # Prevent div by zero
-        dataframe["atr_scaled"] = dataframe["atr_scaled"].clip(0.05, 1)  # Avoid zeroing out
+        atr_min = dataframe["atr"].rolling(100, min_periods=10).min()  # Allow earlier calculations
+        atr_max = dataframe["atr"].rolling(100, min_periods=10).max()
+        dataframe["atr_scaled"] = (dataframe["atr"] - atr_min) / (atr_max - atr_min + 1e-6)
+        dataframe["atr_scaled"] = dataframe["atr_scaled"].fillna(method="bfill").clip(0.05, 1)  # Ensure no NaNs
 
 
         # ✅ Standardize Rolling Trend (Keep Negative Values)
@@ -240,10 +240,10 @@ class ExampleLSTMStrategy_v2(IStrategy):
         dataframe["dynamic_long_threshold"] = dataframe["&-s_target_mean"] + dataframe["&-s_target_std"] * dataframe["atr_scaled"]
         dataframe["dynamic_short_threshold"] = dataframe["&-s_target_mean"] - dataframe["&-s_target_std"] * dataframe["atr_scaled"]
         dataframe["confidence_threshold"] = 0.25 + dataframe["atr_scaled"] * 0.20 
-        dataframe["rolling_trend_threshold"] = dataframe["rolling_trend_scaled"].rolling(100).median() * 0.4
+        dataframe["rolling_trend_threshold"] = dataframe["rolling_trend_scaled"].rolling(100, min_periods=10).median() * 0.35
         dataframe["dynamic_exit_threshold"] = (
             dataframe["&-s_target"].ewm(span=50).mean() +
-            dataframe["atr_scaled"] * dataframe["&-s_target_std"] * (0.75 + dataframe["vol_rank"] * 0.4)
+            dataframe["atr_scaled"] * dataframe["&-s_target_std"] * (0.6 + dataframe["vol_rank"] * 0.3)
         )
         dataframe["exit_trend_threshold"] = dataframe["rolling_trend_scaled"].rolling(50).median() * 0.35
 
@@ -273,18 +273,16 @@ class ExampleLSTMStrategy_v2(IStrategy):
 
         enter_long_conditions = [
             df["do_predict"] == 1,
-            df["&-s_target"] > df["dynamic_long_threshold"],
-            df["rolling_trend_scaled"] > df["rolling_trend_threshold"],  # Dynamic
-            df["vol_rank"] > 0.10,  # Ensures liquidity
-            df["prediction_confidence"] > (df["confidence_threshold"] * 0.7)  # Scaled confidence
+            (df["&-s_target"] > df["dynamic_long_threshold"]) & (df["rolling_trend_scaled"] > df["rolling_trend_threshold"]),
+            df["vol_rank"] > 0.10,
+            df["prediction_confidence"] > (df["confidence_threshold"] * 0.6)
         ]
 
         enter_short_conditions = [
             df["do_predict"] == 1,
-            df["&-s_target"] < df["dynamic_short_threshold"],
-            df["rolling_trend_scaled"] < df["rolling_trend_threshold"],  # Dynamic
+            (df["&-s_target"] < df["dynamic_short_threshold"]) & (df["rolling_trend_scaled"] < df["rolling_trend_threshold"]),
             df["vol_rank"] > 0.10,
-            df["prediction_confidence"] > (df["confidence_threshold"] * 0.7) 
+            df["prediction_confidence"] > (df["confidence_threshold"] * 0.6) 
         ]
 
         df.loc[reduce(lambda x, y: x & y, enter_long_conditions), ["enter_long", "enter_tag"]] = (1, "long")
@@ -306,10 +304,9 @@ class ExampleLSTMStrategy_v2(IStrategy):
         df["active_short_trade"] = (df["enter_short"].cumsum() - df["exit_short"].cumsum()) > 0
         df["active_long_trade"] = (df["enter_long"].cumsum() - df["exit_long"].cumsum()) > 0
 
-        # ✅ Adjusted Time-Based Exit (Without Lookahead Bias)
         df["timed_exit_long"] = (
             df["active_long_trade"] &
-            (df["rolling_trend"].rolling(30).max().fillna(0) > 0.04)
+            (df["rolling_trend"].rolling(30).max().fillna(0) > 0.03)  # Reduce threshold slightly
         ).astype(int)
 
         df["timed_exit_short"] = (
@@ -347,10 +344,10 @@ class ExampleLSTMStrategy_v2(IStrategy):
             "enter_long", "enter_short", "exit_long", "exit_short"
         ]
 
-        filtered_dataframe = df[[col for col in cols_to_keep if col in df.columns]]
-
+        # filtered_dataframe = df[[col for col in cols_to_keep if col in df.columns]]
+        filtered_dataframe = df[cols_to_keep].copy()
         # ✅ Save final DataFrame containing all trade signals
-        filtered_dataframe.to_csv("./user_data/final_trading_data.csv", index=False)
+        filtered_dataframe.to_csv("./user_data/final_trading_data.csv", mode='a', header=not os.path.exists("./user_data/final_trading_data.csv"), index=False)
         logger.info("✅ Final trading data saved to `final_trading_data.csv`")
 
         return df
@@ -391,56 +388,138 @@ class ExampleLSTMStrategy_v2(IStrategy):
     def custom_stoploss(self, pair: str, trade: 'Trade', current_time: datetime, current_rate: float,
                         current_profit: float, **kwargs) -> float:
         """
-        Dynamically adjusts stoploss and ensures stoploss values exist persistently for plotting.
+        Dynamically adjusts stoploss based on ATR, market volatility, and max risk per trade.
+        Ensures correct differentiation between long and short trades.
         """
 
         # ✅ Load dataframe
         dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
-
         if dataframe is None or dataframe.empty:
-            return self.stoploss
+            return self.stoploss  # Fallback to strategy-defined stoploss
 
         last_candle = dataframe.iloc[-1]
-        atr = last_candle['atr'] if 'atr' in last_candle else 0
+        atr = last_candle.get('atr', 0)
+        historical_volatility = dataframe['close'].pct_change().rolling(50).std().iloc[-1] if not dataframe.empty else 0.01
 
-        # ✅ Adjust ATR multiplier dynamically
-        if current_profit > 0.02:
-            atr_multiplier = 2.0  
-        elif current_profit > 0:
-            atr_multiplier = 1.5  
-        elif current_profit < -0.01:
-            atr_multiplier = 0.8  
+        # ✅ Compute dynamic ATR multiplier based on profit & market conditions
+        base_atr_multiplier = 2.0  # Default ATR multiplier
+        atr_multiplier = (
+            base_atr_multiplier * 1.5 if current_profit > 0.03 else
+            base_atr_multiplier * 1.2 if current_profit > 0.01 else
+            base_atr_multiplier * 0.8 if current_profit < -0.02 else
+            base_atr_multiplier
+        )
+
+        # ✅ Compute stoploss buffer
+        stoploss_buffer = atr * atr_multiplier
+
+        # ✅ **Differentiate Between Long and Short Trades**
+        if trade.is_short:
+            # **For SHORT trades:** Stoploss is ABOVE the entry price (buy to close)
+            dynamic_stoploss = current_rate + stoploss_buffer
+            max_loss_price = trade.open_rate * (1 + min(0.03 + historical_volatility, 0.06))  # Cap at 6% max loss
+            if current_rate > max_loss_price:
+                return -min(0.03 + historical_volatility, 0.06)  # **Force exit**
+
+            # ✅ **Short trades should have a stricter max duration**
+            max_trade_duration = timedelta(days=1.5)  # **Max 1.5 days for shorts**
+            force_exit_loss = -0.004  # **Force short trade exit at -0.4% loss after max duration**
+
         else:
-            atr_multiplier = 1.2  
+            # **For LONG trades:** Stoploss is BELOW the entry price (sell to close)
+            dynamic_stoploss = current_rate - stoploss_buffer
+            max_loss_price = trade.open_rate * (1 - min(0.03 + historical_volatility, 0.06))  # Cap at 6% max loss
+            if current_rate < max_loss_price:
+                return -min(0.03 + historical_volatility, 0.06)  # **Force exit**
 
-        buffer = atr * 0.5 if current_profit > 0.01 else 0
+            # ✅ **Long trades may have slightly more room**
+            max_trade_duration = timedelta(days=2.5)  # **Max 2.5 days for longs**
+            force_exit_loss = -0.005  # **Force long trade exit at -0.5% loss after max duration**
 
-        # ✅ Compute stoploss
-        stoploss_value = current_rate + (atr * atr_multiplier) + buffer if trade.is_short else \
-                        current_rate - (atr * atr_multiplier) - buffer
+        # ✅ **Force exit if trade exceeds max duration**
+        if (current_time - trade.open_date_utc) > max_trade_duration:
+            return force_exit_loss  # **Apply different exit loss for longs vs. shorts**
 
-        # ✅ Ensure stoploss column exists and update it directly
+        # ✅ Store stoploss in dataframe for tracking
         if "stoploss" not in dataframe.columns:
             dataframe["stoploss"] = np.nan
+        dataframe.at[last_candle.name, "stoploss"] = dynamic_stoploss
 
-        dataframe.at[last_candle.name, "stoploss"] = stoploss_value
+        return dynamic_stoploss
+    
+    def custom_stake_amount(
+        self,
+        pair: str,
+        current_time: datetime,
+        current_rate: float,
+        proposed_stake: float,
+        min_stake: float | None,
+        max_stake: float,
+        leverage: float,
+        entry_tag: str | None,
+        side: str,
+        **kwargs,
+    ) -> float:
+        """
+        Dynamically determines position size based on account balance, ATR, and market conditions.
+        """
 
-        return stoploss_value
+        # ✅ Load latest market data
+        dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
+        if dataframe is None or dataframe.empty:
+            return proposed_stake  # Use default stake if no data
 
+        last_candle = dataframe.iloc[-1]
+        atr = last_candle.get('atr', 0)
+        historical_volatility = dataframe['close'].pct_change().rolling(50).std().iloc[-1] if not dataframe.empty else 0.01
+
+        # ✅ Compute max risk per trade dynamically (adjusting for market volatility)
+        base_risk = 0.02  # Base risk: 2% per trade
+        adjusted_risk = base_risk * (1 + historical_volatility)  # Adjust risk based on volatility
+
+        max_risk = max_stake * adjusted_risk  
+
+        # ✅ ATR-based position sizing
+        if atr > 0:
+            stake_amount = max_risk / (atr * leverage)  # **Adjust stake based on leverage**
+        else:
+            stake_amount = max_risk  # Fallback if ATR is zero
+
+        # ✅ Ensure stake does not exceed available balance or max_stake
+        stake_amount = min(stake_amount, max_stake, proposed_stake)
+
+        # ✅ Ensure stake meets min_stake requirement
+        if min_stake and stake_amount < min_stake:
+            stake_amount = min_stake
+
+        return stake_amount
 
     def confirm_trade_entry(self, pair: str, order_type: str, amount: float, rate: float, time_in_force: str, 
-                        current_time, entry_tag, side: str, **kwargs) -> bool:
+                            current_time, entry_tag, side: str, **kwargs) -> bool:
+        """
+        Dynamically adjusts trade size based on prediction confidence, 
+        while ensuring it stays within defined risk limits.
+        """
 
         df, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
         last_candle = df.iloc[-1]
 
-        confidence = last_candle["prediction_confidence"] if "prediction_confidence" in last_candle else 0.5
+        # ✅ Get prediction confidence (fallback to 0.5 if missing)
+        confidence = last_candle.get("prediction_confidence", 0.5)
 
-        # Adjust position size dynamically (scale trade size with confidence)
+        # ✅ Apply dynamic scaling to trade size
+        min_trade_size = amount * 0.5  # Ensure at least 50% of the original trade size
+        max_trade_size = amount * 1.5  # Prevent exceeding 150% of the original trade size
+
         adjusted_size = amount * confidence
+        adjusted_size = max(min_trade_size, min(adjusted_size, max_trade_size))  # Ensure within bounds
+
+        # ✅ Log trade confirmation details
+        logger.info(f"🚀 Confirming trade entry | Pair: {pair} | Confidence: {confidence:.2f} | Adjusted Size: {adjusted_size:.4f}")
 
         return super().confirm_trade_entry(pair, order_type, adjusted_size, rate, time_in_force, 
                                         current_time, entry_tag, side, **kwargs)
+
 
     def compute_prediction_metrics(self, dataframe: pd.DataFrame, metadata: dict, label_col: str= "T", prediction_col: str = "&-s_target") -> pd.DataFrame: 
         """
