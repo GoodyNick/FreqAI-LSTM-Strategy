@@ -71,9 +71,6 @@ class ExampleLSTMStrategy_v3(IStrategy):
     trailing_stop_positive_offset = 0.0139
     trailing_only_offset_is_reached = True
 
-    threshold_buy = RealParameter(-1, 1, default=0, space='buy')
-    threshold_sell = RealParameter(-1, 1, default=0, space='sell')
-
     timeframe = "1h"
     can_short = True
     use_exit_signal = True
@@ -88,25 +85,22 @@ class ExampleLSTMStrategy_v3(IStrategy):
 
     # ✅ Hyperopt Parameters
     # ✅ Real Parameters (Fine-tuned continuous values)
-    dynamic_long_threshold_multiplier = RealParameter(0.8, 1.2, default=1.0, space='buy')
-    dynamic_short_threshold_multiplier = RealParameter(0.8, 1.2, default=1.0, space='sell')
-    confidence_threshold_multiplier = RealParameter(0.5, 0.8, default=0.65, space='buy')
-    dynamic_exit_threshold_multiplier = RealParameter(0.5, 1.0, default=0.6, space='sell')
-    exit_trend_threshold_multiplier = RealParameter(0.2, 0.5, default=0.35, space='sell')
-    atr_multiplier = RealParameter(0.5, 2.0, default=1.5, space='sell')
-    base_risk = RealParameter(0.005, 0.05, default=0.02, space='sell')
-    rolling_trend_threshold_multiplier = RealParameter(0.8, 1.2, default=1.0, space='sell')
-    dynamic_long_threshold_multiplier = RealParameter(0.8, 1.2, default=1.0, space='buy')
-    dynamic_short_threshold_multiplier = RealParameter(0.8, 1.2, default=1.0, space='sell')
-    confidence_threshold_multiplier = RealParameter(0.5, 0.8, default=0.65, space='buy')
+    dynamic_long_threshold_multiplier = RealParameter(0.7, 1.3, default=1.0, space='buy')
+    dynamic_short_threshold_multiplier = RealParameter(0.7, 1.3, default=1.0, space='buy')
+    confidence_threshold_multiplier = RealParameter(0.4, 0.9, default=0.65, space='buy')
+    dynamic_exit_threshold_multiplier = RealParameter(0.4, 1.2, default=0.6, space='sell')
+    exit_trend_threshold_multiplier = RealParameter(0.2, 0.5, default=0.35, space='sell') 
+    atr_multiplier = RealParameter(0.5, 2.0, default=1.5, space='sell')  
+    base_risk = RealParameter(0.005, 0.05, default=0.02, space='sell')  
+    rolling_trend_threshold_multiplier = RealParameter(0.7, 1.3, default=1.0, space='buy')
     # ✅ Integer Parameters (Stepwise tuning)
-    timed_exit_long_threshold = IntParameter(10, 30, default=20, space='sell')
-    timed_exit_short_threshold = IntParameter(-30, -10, default=-20, space='sell')
-    max_trade_duration_long = IntParameter(1, 5, default=2, space='sell')
-    max_trade_duration_short = IntParameter(1, 3, default=1, space='sell')
+    timed_exit_long_threshold = IntParameter(10, 30, default=20, space='sell')  
+    timed_exit_short_threshold = IntParameter(10, 30, default=20, space='sell')  
+    max_trade_duration_long = IntParameter(1, 7, default=2, space='sell')  
+    max_trade_duration_short = IntParameter(1, 5, default=1, space='sell')  
     # ✅ Categorical Parameters (Fixed choices)
-    stake_scaling_factor = CategoricalParameter([0.5, 1.0, 1.5], default=1.0, space='buy')
-    max_risk_per_trade_multiplier = CategoricalParameter([0.01, 0.02, 0.03], default=0.02, space='sell')
+    stake_scaling_factor = CategoricalParameter([0.4, 0.75, 1.0, 1.25, 1.5], default=1.0, space='buy')  
+    max_risk_per_trade_multiplier = CategoricalParameter([0.01, 0.02, 0.03], default=0.02, space='sell')  
 
     def feature_engineering_expand_all(self, dataframe: pd.DataFrame, period: int, metadata: Dict, **kwargs):
         """
@@ -285,15 +279,24 @@ class ExampleLSTMStrategy_v3(IStrategy):
 
         dataframe = self.freqai.start(dataframe, metadata, self)
 
-        dataframe["dynamic_long_threshold"] = dataframe["&-s_target_mean"] + dataframe["&-s_target_std"] * dataframe["atr_scaled"] * self.dynamic_long_threshold_multiplier.value
-        dataframe["dynamic_short_threshold"] = dataframe["&-s_target_mean"] - dataframe["&-s_target_std"] * dataframe["atr_scaled"] * self.dynamic_short_threshold_multiplier.value
-        dataframe["confidence_threshold"] = 0.25 + dataframe["atr_scaled"] * 0.20 * self.confidence_threshold_multiplier.value
-        dataframe["rolling_trend_threshold"] = dataframe["rolling_trend_scaled"].rolling(100, min_periods=10).median() * self.rolling_trend_threshold_multiplier.value
-        dataframe["dynamic_exit_threshold"] = (
+        # ✅ Store Base Values (No Hyperopt Parameters Here)
+        dataframe["dynamic_long_threshold_base"] = dataframe["&-s_target_mean"] + dataframe["&-s_target_std"] * dataframe["atr_scaled"]
+        dataframe["dynamic_short_threshold_base"] = dataframe["&-s_target_mean"] - dataframe["&-s_target_std"] * dataframe["atr_scaled"]
+        dataframe["confidence_threshold_base"] = 0.25 + dataframe["atr_scaled"] * 0.20
+        dataframe["rolling_trend_threshold_base"] = dataframe["rolling_trend_scaled"].rolling(100, min_periods=10).median()
+        dataframe["dynamic_exit_threshold_base"] = (
             dataframe["&-s_target"].ewm(span=50).mean() +
-            dataframe["atr_scaled"] * dataframe["&-s_target_std"] * (0.6 + dataframe["vol_rank"] * 0.3) * self.dynamic_exit_threshold_multiplier.value
+            dataframe["atr_scaled"] * dataframe["&-s_target_std"] * (0.6 + dataframe["vol_rank"] * 0.3)
         )
-        dataframe["exit_trend_threshold"] = dataframe["rolling_trend_scaled"].rolling(50).median() * self.exit_trend_threshold_multiplier.value
+        dataframe["exit_trend_threshold_base"] = dataframe["rolling_trend_scaled"].rolling(50).median()
+
+        # ✅ Keeping `T` for Plotting Purposes Only (Not Used in Trade Logic)
+        dataframe["T"] = self.create_target_T(dataframe)
+        dataframe["Prediction"] = dataframe["&-s_target"]
+        dataframe["Avg Prediction"] = dataframe["&-s_target_mean"]
+        dataframe["True Label"] = dataframe["T"]
+        self.compute_prediction_metrics(dataframe, metadata)
+        self.save_prediction_metrics()
 
         return dataframe
 
@@ -305,18 +308,18 @@ class ExampleLSTMStrategy_v3(IStrategy):
 
         enter_long_conditions = [
             df["do_predict"] == 1,
-            df["&-s_target"] > (df["dynamic_long_threshold"]),
-            df["rolling_trend_scaled"] > (df["rolling_trend_threshold"]),
+            df["&-s_target"] > df["dynamic_long_threshold_base"] * self.dynamic_long_threshold_multiplier.value,
+            df["rolling_trend_scaled"] > df["rolling_trend_threshold_base"] * self.rolling_trend_threshold_multiplier.value,
             df["vol_rank"] > 0.10,
-            df["prediction_confidence"] > (df["confidence_threshold"])
+            df["prediction_confidence"] > df["confidence_threshold_base"] * self.confidence_threshold_multiplier.value
         ]
 
         enter_short_conditions = [
             df["do_predict"] == 1,
-            df["&-s_target"] < (df["dynamic_short_threshold"]),
-            df["rolling_trend_scaled"] < (df["rolling_trend_threshold"]),
+            df["&-s_target"] < df["dynamic_short_threshold_base"] * self.dynamic_short_threshold_multiplier.value,
+            df["rolling_trend_scaled"] < df["rolling_trend_threshold_base"] * self.rolling_trend_threshold_multiplier.value,
             df["vol_rank"] > 0.18,
-            df["prediction_confidence"] > (df["confidence_threshold"])
+            df["prediction_confidence"] > df["confidence_threshold_base"] * self.confidence_threshold_multiplier.value
         ]
 
         df.loc[reduce(lambda x, y: x & y, enter_long_conditions), ["enter_long", "enter_tag"]] = (1, "long")
@@ -341,20 +344,20 @@ class ExampleLSTMStrategy_v3(IStrategy):
 
         strong_exit_long_conditions = [
             df["do_predict"] >= 0,
-            df["&-s_target"] < (df["dynamic_exit_threshold"]),
-            df["rolling_trend_scaled"] < (df["exit_trend_threshold"]),
+            df["&-s_target"] < df["dynamic_exit_threshold_base"] * self.dynamic_exit_threshold_multiplier.value,
+            df["rolling_trend_scaled"] < df["exit_trend_threshold_base"] * self.exit_trend_threshold_multiplier.value,
             df["timed_exit_long"] | (df["vol_rank"] > 0.70),
             df["active_long_trade"],
-            df["prediction_confidence"] > df["confidence_threshold"]
+            df["prediction_confidence"] > df["confidence_threshold_base"]
         ]
 
         strong_exit_short_conditions = [
             df["do_predict"] >= 0,
-            df["&-s_target"] > (df["dynamic_exit_threshold"]),
-            df["rolling_trend_scaled"] > (df["exit_trend_threshold"]),
+            df["&-s_target"] > df["dynamic_exit_threshold_base"] * self.dynamic_exit_threshold_multiplier.value,
+            df["rolling_trend_scaled"] > df["exit_trend_threshold_base"] * self.exit_trend_threshold_multiplier.value,
             df["timed_exit_short"] | (df["vol_rank"] > 0.65),
             df["active_short_trade"],
-            df["prediction_confidence"] > df["confidence_threshold"]
+            df["prediction_confidence"] > df["confidence_threshold_base"]
         ]
 
         df.loc[reduce(lambda x, y: x & y, strong_exit_long_conditions), ["exit_long", "exit_tag"]] = (1, "strong_exit_long")
@@ -373,13 +376,15 @@ class ExampleLSTMStrategy_v3(IStrategy):
         historical_volatility = dataframe['close'].pct_change().rolling(50).std().iloc[-1] if not dataframe.empty else 0.01
         prediction_confidence = last_candle.get("prediction_confidence", 0.5)
 
-        atr_multiplier = self.atr_multiplier.value * (1.5 + historical_volatility if current_profit > 0.03 else
-                                                    1.2 + historical_volatility if current_profit > 0.01 else
-                                                    0.8 - prediction_confidence * 0.5 if current_profit < -0.02 else
-                                                    1.0 + prediction_confidence * 0.3)
+        atr_multiplier = self.atr_multiplier.value * (
+            1.5 + historical_volatility if current_profit > 0.03 else
+            1.2 + historical_volatility if current_profit > 0.01 else
+            0.8 - prediction_confidence * 0.5 if current_profit < -0.02 else
+            1.0 + prediction_confidence * 0.3
+        )
 
         stoploss_buffer = atr * atr_multiplier
-        max_loss_pct = min(0.03 + historical_volatility, 0.06)
+        max_loss_pct = min(0.03 + historical_volatility, 0.06) * self.max_risk_per_trade_multiplier.value
 
         dynamic_stoploss = current_rate + stoploss_buffer if trade.is_short else current_rate - stoploss_buffer
 
@@ -399,13 +404,12 @@ class ExampleLSTMStrategy_v3(IStrategy):
         adjusted_risk = self.base_risk.value * (1 + historical_volatility)
         max_risk = max_stake * adjusted_risk
 
-        stake_amount = max_risk / (atr * leverage) if atr > 0 else max_risk
+        stake_amount = (max_risk / (atr * leverage)) * self.stake_scaling_factor.value if atr > 0 else max_risk
         stake_amount = min(stake_amount, max_stake, proposed_stake)
         if min_stake and stake_amount < min_stake:
             stake_amount = min_stake
 
         return stake_amount
-
 
     def confirm_trade_entry(self, pair: str, order_type: str, amount: float, rate: float, time_in_force: str, 
                             current_time, entry_tag, side: str, **kwargs) -> bool:
