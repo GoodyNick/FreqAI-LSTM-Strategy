@@ -27,7 +27,7 @@ from freqtrade.persistence import Trade
 logger = logging.getLogger(__name__)
 
 
-class ExampleLSTMStrategy_v2(IStrategy):
+class ExampleLSTMStrategy_v3(IStrategy):
     """
     This is an example strategy that uses the LSTMRegressor model to predict the target score.
     Use at your own risk.
