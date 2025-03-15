@@ -57,6 +57,27 @@ class ExampleLSTMStrategy_v3(IStrategy):
         },
     }
 
+    # # Buy hyperspace params:
+    # buy_params = {
+    #     "confidence_threshold_multiplier": 0.4059990883940077,
+    #     "dynamic_long_threshold_multiplier": 1.1270935263223953,
+    #     "dynamic_short_threshold_multiplier": 1.2236854102864974,
+    #     "rolling_trend_threshold_multiplier": 0.7174560260330334,
+    #     "stake_scaling_factor": 0.4,
+    #     "threshold_buy": 0.20768975502468745
+    # }
+    # # Sell hyperspace params:
+    # sell_params = {
+    #     "atr_multiplier": 0.67255,
+    #     "base_risk": 0.04459,
+    #     "dynamic_exit_threshold_multiplier": 1.03412,
+    #     "exit_trend_threshold_multiplier": 0.31935,
+    #     "max_risk_per_trade_multiplier": 0.01,
+    #     "max_trade_duration_long": 3,
+    #     "max_trade_duration_short": 3,
+    #     "timed_exit_long_threshold": 27,
+    #     "timed_exit_short_threshold": 12,
+    # }
     # ROI table:
     minimal_roi = {
         "0": 1  # we let the model decide when to exit
@@ -83,24 +104,31 @@ class ExampleLSTMStrategy_v3(IStrategy):
 
     from freqtrade.strategy import IntParameter, RealParameter, CategoricalParameter
 
-    # ✅ Hyperopt Parameters
+    # ✅ Hyperopt Parameters (Updated)
     # ✅ Real Parameters (Fine-tuned continuous values)
-    dynamic_long_threshold_multiplier = RealParameter(0.7, 1.3, default=1.0, space='buy')
-    dynamic_short_threshold_multiplier = RealParameter(0.7, 1.3, default=1.0, space='buy')
-    confidence_threshold_multiplier = RealParameter(0.4, 0.9, default=0.65, space='buy')
-    dynamic_exit_threshold_multiplier = RealParameter(0.4, 1.2, default=0.6, space='sell')
-    exit_trend_threshold_multiplier = RealParameter(0.2, 0.5, default=0.35, space='sell') 
-    atr_multiplier = RealParameter(0.5, 2.0, default=1.5, space='sell')  
-    base_risk = RealParameter(0.005, 0.05, default=0.02, space='sell')  
-    rolling_trend_threshold_multiplier = RealParameter(0.7, 1.3, default=1.0, space='buy')
+    dynamic_long_threshold_multiplier = RealParameter(0.7, 1.5, default=1.0, space="buy")
+    dynamic_short_threshold_multiplier = RealParameter(0.7, 1.5, default=1.0, space="buy")
+    confidence_threshold_multiplier = RealParameter(0.4, 1.0, default=0.65, space="buy")
+    dynamic_exit_threshold_multiplier = RealParameter(0.4, 1.5, default=0.6, space="sell")
+    exit_trend_threshold_multiplier = RealParameter(0.2, 0.6, default=0.35, space="sell")
+    atr_multiplier = RealParameter(0.5, 2.5, default=1.5, space="sell")
+    base_risk = RealParameter(0.005, 0.07, default=0.02, space="sell")
+    rolling_trend_threshold_multiplier = RealParameter(0.7, 1.5, default=1.0, space="buy")
+
+    # ✅ New Hyperoptable Stoploss Parameters
+    soft_stoploss_pct = RealParameter(-0.20, -0.05, default=-0.10, space="sell")  # Adjust soft stoploss level
+    trailing_stop_scaling = RealParameter(0.5, 1.5, default=0.8, space="sell")  # Controls how aggressively stoploss tightens
+
     # ✅ Integer Parameters (Stepwise tuning)
-    timed_exit_long_threshold = IntParameter(10, 30, default=20, space='sell')  
-    timed_exit_short_threshold = IntParameter(10, 30, default=20, space='sell')  
-    max_trade_duration_long = IntParameter(1, 7, default=2, space='sell')  
-    max_trade_duration_short = IntParameter(1, 5, default=1, space='sell')  
-    # ✅ Categorical Parameters (Fixed choices)
-    stake_scaling_factor = CategoricalParameter([0.4, 0.75, 1.0, 1.25, 1.5], default=1.0, space='buy')  
-    max_risk_per_trade_multiplier = CategoricalParameter([0.01, 0.02, 0.03], default=0.02, space='sell')  
+    timed_exit_long_threshold = IntParameter(10, 40, default=20, space="sell")
+    timed_exit_short_threshold = IntParameter(10, 40, default=20, space="sell")
+    max_trade_duration_long = IntParameter(1, 10, default=2, space="sell")
+    max_trade_duration_short = IntParameter(1, 7, default=1, space="sell")
+
+    # ✅ Converted Categorical Parameters to Real for Fine-Tuning
+    stake_scaling_factor = RealParameter(0.4, 1.5, default=1.0, space="buy")
+    max_risk_per_trade_multiplier = RealParameter(0.005, 0.05, default=0.02, space="sell")
+
 
     def feature_engineering_expand_all(self, dataframe: pd.DataFrame, period: int, metadata: Dict, **kwargs):
         """
@@ -376,21 +404,31 @@ class ExampleLSTMStrategy_v3(IStrategy):
         historical_volatility = dataframe['close'].pct_change().rolling(50).std().iloc[-1] if not dataframe.empty else 0.01
         prediction_confidence = last_candle.get("prediction_confidence", 0.5)
 
-        atr_multiplier = self.atr_multiplier.value * (
-            1.5 + historical_volatility if current_profit > 0.03 else
-            1.2 + historical_volatility if current_profit > 0.01 else
-            0.8 - prediction_confidence * 0.5 if current_profit < -0.02 else
-            1.0 + prediction_confidence * 0.3
-        )
-
-        stoploss_buffer = atr * atr_multiplier
+        trade_duration = (current_time - trade.open_date_utc).total_seconds() / 3600  
         max_loss_pct = min(0.03 + historical_volatility, 0.06) * self.max_risk_per_trade_multiplier.value
 
-        dynamic_stoploss = current_rate + stoploss_buffer if trade.is_short else current_rate - stoploss_buffer
+        # ✅ Apply a soft stoploss for the first 6 hours to prevent early exits
+        if trade_duration < 6:
+            return -0.10  # Soft 10% stoploss early
+
+        # ✅ Less aggressive ATR-based stoploss
+        atr_multiplier = self.atr_multiplier.value * (
+            1.2 + historical_volatility if current_profit > 0.02 else
+            1.0 + historical_volatility if current_profit > 0.01 else
+            0.9 - prediction_confidence * 0.2 if current_profit < -0.01 else
+            1.0
+        )
+        stoploss_buffer = atr * atr_multiplier * 0.8  # Prevents aggressive tightening
+
+        # ✅ Stoploss logic for longs and shorts
+        if trade.is_short:
+            dynamic_stoploss = current_rate + stoploss_buffer * 1.3  # Give shorts more room
+        else:
+            dynamic_stoploss = current_rate - stoploss_buffer * 1.1  # Slightly tighter for longs
 
         return -max_loss_pct if (trade.is_short and current_rate > trade.open_rate * (1 + max_loss_pct)) or \
                             (not trade.is_short and current_rate < trade.open_rate * (1 - max_loss_pct)) else dynamic_stoploss
-    
+
     def custom_stake_amount(self, pair: str, current_time: datetime, current_rate: float, proposed_stake: float,
                             min_stake: float | None, max_stake: float, leverage: float, entry_tag: str | None, side: str, **kwargs) -> float:
         dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
