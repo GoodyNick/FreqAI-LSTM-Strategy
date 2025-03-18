@@ -84,11 +84,11 @@ class ExampleLSTMStrategy_v3(IStrategy):
     # ✅ Hyperopt Parameters
     # ✅ Entry/Exit hyperopt parameters
     dynamic_long_threshold_multiplier = RealParameter(0.7, 1.5, default=1.0, space="buy")
-    dynamic_short_threshold_multiplier = RealParameter(0.7, 1.5, default=1.0, space="buy")
+    dynamic_short_threshold_multiplier = RealParameter(0.7, 1.5, default=1.15, space="buy")
     confidence_threshold_multiplier = RealParameter(0.3, 1.2, default=0.65, space="buy")
     dynamic_exit_threshold_multiplier = RealParameter(0.4, 2.0, default=0.6, space="sell")
     exit_trend_threshold_multiplier = RealParameter(0.2, 0.6, default=0.35, space="sell")
-    rolling_trend_threshold_multiplier = RealParameter(0.4, 2.0, default=1.0, space="buy")  # ✅ Expanded range
+    rolling_trend_threshold_multiplier = RealParameter(0.4, 2.0, default=1.1, space="buy")  # ✅ Expanded range
     timed_exit_long_threshold = IntParameter(10, 40, default=20, space="sell")
     timed_exit_short_threshold = IntParameter(10, 40, default=20, space="sell")
     # ✅ Stoploss Hyperopt Parameters
