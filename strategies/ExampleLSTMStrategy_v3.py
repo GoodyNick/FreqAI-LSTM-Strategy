@@ -1,6 +1,6 @@
 import logging
 from functools import reduce
-from typing import Dict
+from typing import Dict, Optional
 import joblib
 import os
 from datetime import datetime
@@ -21,7 +21,7 @@ from torch import mul
 from freqtrade import data
 from freqtrade.exchange.exchange_utils import *
 from freqtrade.optimize.analysis import lookahead
-from freqtrade.strategy import IStrategy, RealParameter
+from freqtrade.strategy import IStrategy, IntParameter, RealParameter, CategoricalParameter
 from freqtrade.persistence import Trade
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class ExampleLSTMStrategy_v3(IStrategy):
     Use at your own risk.
     This is a simple example strategy and should be used for educational purposes only.
     """
-
+    
     plot_config = {
         "main_plot": {
         },
@@ -57,27 +57,6 @@ class ExampleLSTMStrategy_v3(IStrategy):
         },
     }
 
-    # # Buy hyperspace params:
-    # buy_params = {
-    #     "confidence_threshold_multiplier": 0.4059990883940077,
-    #     "dynamic_long_threshold_multiplier": 1.1270935263223953,
-    #     "dynamic_short_threshold_multiplier": 1.2236854102864974,
-    #     "rolling_trend_threshold_multiplier": 0.7174560260330334,
-    #     "stake_scaling_factor": 0.4,
-    #     "threshold_buy": 0.20768975502468745
-    # }
-    # # Sell hyperspace params:
-    # sell_params = {
-    #     "atr_multiplier": 0.67255,
-    #     "base_risk": 0.04459,
-    #     "dynamic_exit_threshold_multiplier": 1.03412,
-    #     "exit_trend_threshold_multiplier": 0.31935,
-    #     "max_risk_per_trade_multiplier": 0.01,
-    #     "max_trade_duration_long": 3,
-    #     "max_trade_duration_short": 3,
-    #     "timed_exit_long_threshold": 27,
-    #     "timed_exit_short_threshold": 12,
-    # }
     # ROI table:
     minimal_roi = {
         "0": 1  # we let the model decide when to exit
@@ -102,33 +81,27 @@ class ExampleLSTMStrategy_v3(IStrategy):
                                                 
     prediction_metrics_storage = []  # Class-level storage for all pairs
 
-    from freqtrade.strategy import IntParameter, RealParameter, CategoricalParameter
-
-    # ✅ Hyperopt Parameters (Updated)
-    # ✅ Real Parameters (Fine-tuned continuous values)
+    # ✅ Hyperopt Parameters
+    # ✅ Entry/Exit hyperopt parameters
     dynamic_long_threshold_multiplier = RealParameter(0.7, 1.5, default=1.0, space="buy")
     dynamic_short_threshold_multiplier = RealParameter(0.7, 1.5, default=1.0, space="buy")
-    confidence_threshold_multiplier = RealParameter(0.4, 1.0, default=0.65, space="buy")
-    dynamic_exit_threshold_multiplier = RealParameter(0.4, 1.5, default=0.6, space="sell")
+    confidence_threshold_multiplier = RealParameter(0.3, 1.2, default=0.65, space="buy")
+    dynamic_exit_threshold_multiplier = RealParameter(0.4, 2.0, default=0.6, space="sell")
     exit_trend_threshold_multiplier = RealParameter(0.2, 0.6, default=0.35, space="sell")
-    atr_multiplier = RealParameter(0.5, 2.5, default=1.5, space="sell")
-    base_risk = RealParameter(0.005, 0.07, default=0.02, space="sell")
-    rolling_trend_threshold_multiplier = RealParameter(0.7, 1.5, default=1.0, space="buy")
-
-    # ✅ New Hyperoptable Stoploss Parameters
-    soft_stoploss_pct = RealParameter(-0.20, -0.05, default=-0.10, space="sell")  # Adjust soft stoploss level
-    trailing_stop_scaling = RealParameter(0.5, 1.5, default=0.8, space="sell")  # Controls how aggressively stoploss tightens
-
-    # ✅ Integer Parameters (Stepwise tuning)
+    rolling_trend_threshold_multiplier = RealParameter(0.4, 2.0, default=1.0, space="buy")  # ✅ Expanded range
     timed_exit_long_threshold = IntParameter(10, 40, default=20, space="sell")
     timed_exit_short_threshold = IntParameter(10, 40, default=20, space="sell")
-    max_trade_duration_long = IntParameter(1, 10, default=2, space="sell")
-    max_trade_duration_short = IntParameter(1, 7, default=1, space="sell")
-
-    # ✅ Converted Categorical Parameters to Real for Fine-Tuning
+    # ✅ Stoploss Hyperopt Parameters
+    soft_stoploss_pct = RealParameter(-0.25, -0.02, default=-0.10, space="sell")  # ✅ Dynamic soft stoploss
+    min_trade_duration = IntParameter(6, 24, default=12, space="sell")  # ✅ Ensures trades last X hours before stoploss
+    min_profit_for_trailing = RealParameter(0.02, 0.06, default=0.04, space="sell")  # ✅ When trailing stop activates
+    atr_stoploss_multiplier = RealParameter(1.0, 3.0, default=1.5, space="sell")  # ✅ Adjust ATR-based stoploss buffer dynamically
+    historical_volatility_factor = RealParameter(0.3, 1.2, default=0.5, space="sell")  # ✅ Modify stoploss based on market volatility
+    prediction_confidence_factor = RealParameter(0.2, 1.0, default=0.6, space="sell")  # ✅ Use ML confidence to fine-tune stoploss
+    max_risk_per_trade_multiplier = RealParameter(0.003, 0.07, default=0.02, space="sell")  # ✅ Expanded range
+    # ✅ Stake amount hyperopt parameters
     stake_scaling_factor = RealParameter(0.4, 1.5, default=1.0, space="buy")
-    max_risk_per_trade_multiplier = RealParameter(0.005, 0.05, default=0.02, space="sell")
-
+    base_risk = RealParameter(0.005, 0.10, default=0.02, space="sell")  # ✅ Fix: Ensures base_risk exists
 
     def feature_engineering_expand_all(self, dataframe: pd.DataFrame, period: int, metadata: Dict, **kwargs):
         """
@@ -290,24 +263,31 @@ class ExampleLSTMStrategy_v3(IStrategy):
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         self.freqai_info = self.config["freqai"]
 
+        # ✅ ATR Calculation (Same as Original)
         dataframe["atr"] = ta.ATR(dataframe, timeperiod=14).bfill()
+
+        # ✅ Volume Rank (Same as Original)
         dataframe["vol_rank"] = dataframe["volume"].rolling(24).rank(pct=True).fillna(0)
+
+        # ✅ Improved Rolling Trend (Same concept but more adaptive)
         dataframe["rolling_trend"] = dataframe["close"].pct_change(12).rolling(6).mean().fillna(0)
 
+        # ✅ Improved ATR Scaling: Using Moving Percentile Instead of Min/Max
         atr_window = 100
-        atr_min = dataframe["atr"].rolling(atr_window, min_periods=10).min()
-        atr_max = dataframe["atr"].rolling(atr_window, min_periods=10).max()
-        dataframe["atr_scaled"] = (dataframe["atr"] - atr_min) / (atr_max - atr_min + 1e-6)
-        dataframe["atr_scaled"] = dataframe["atr_scaled"].fillna(method="bfill").clip(0.05, 1)
+        dataframe["atr_scaled"] = dataframe["atr"] / dataframe["atr"].rolling(atr_window).quantile(0.90)
+        dataframe["atr_scaled"] = dataframe["atr_scaled"].bfill().clip(0.05, 1)
 
+        # ✅ Improved Rolling Trend Scaling: Adaptive Window + Normalization
         trend_window = 100
-        mean_trend = dataframe["rolling_trend"].rolling(trend_window).mean()
-        std_trend = dataframe["rolling_trend"].rolling(trend_window).std()
+        adaptive_window = int(min(trend_window, max(20, dataframe["atr"].rolling(50).mean().iloc[-1] * 10)))
+        mean_trend = dataframe["rolling_trend"].rolling(adaptive_window).mean()
+        std_trend = dataframe["rolling_trend"].rolling(adaptive_window).std()
         dataframe["rolling_trend_scaled"] = (dataframe["rolling_trend"] - mean_trend) / (std_trend + 1e-6)
 
+        # ✅ Call FreqAI for ML Predictions
         dataframe = self.freqai.start(dataframe, metadata, self)
 
-        # ✅ Store Base Values (No Hyperopt Parameters Here)
+        # ✅ Store Threshold Base Values (No Hyperopt Parameters Here, Same as Original)
         dataframe["dynamic_long_threshold_base"] = dataframe["&-s_target_mean"] + dataframe["&-s_target_std"] * dataframe["atr_scaled"]
         dataframe["dynamic_short_threshold_base"] = dataframe["&-s_target_mean"] - dataframe["&-s_target_std"] * dataframe["atr_scaled"]
         dataframe["confidence_threshold_base"] = 0.25 + dataframe["atr_scaled"] * 0.20
@@ -323,6 +303,8 @@ class ExampleLSTMStrategy_v3(IStrategy):
         dataframe["Prediction"] = dataframe["&-s_target"]
         dataframe["Avg Prediction"] = dataframe["&-s_target_mean"]
         dataframe["True Label"] = dataframe["T"]
+        
+        # ✅ Compute & Save Prediction Metrics (Same as Original)
         self.compute_prediction_metrics(dataframe, metadata)
         self.save_prediction_metrics()
 
@@ -332,22 +314,33 @@ class ExampleLSTMStrategy_v3(IStrategy):
         df["enter_short"] = 0
         df["enter_long"] = 0
 
-        df["valid_volume"] = df["vol_rank"] > 0.15
+        # ✅ Ensure valid volume to prevent weak market trades
+        df["valid_volume"] = df["vol_rank"] > 0.20  # Increased from 0.15 for stricter filtering
+
+        # ✅ Fix: Ensure exit_reason exists before referencing it
+        df["stoploss_exit"] = df["exit_reason"].eq("stop_loss") if "exit_reason" in df else False
+        # ✅ Track recent stoploss exits to prevent immediate re-entries
+        df["stoploss_exit_cumsum"] = df["stoploss_exit"].cumsum()
+        df["stoploss_exit_time"] = df["stoploss_exit_cumsum"].where(df["stoploss_exit"], np.nan).ffill()
+        cooldown_candles = 1  # Prevent re-entry for 5 candles (5 hours in 1h timeframe)
+        df["recent_stoploss_exit"] = (df.index - df["stoploss_exit_time"]).fillna(pd.Timedelta("10 days")) < pd.Timedelta(hours=cooldown_candles)
 
         enter_long_conditions = [
             df["do_predict"] == 1,
-            df["&-s_target"] > df["dynamic_long_threshold_base"] * self.dynamic_long_threshold_multiplier.value,
+            qtpylib.crossed_above(df["&-s_target"], df["dynamic_long_threshold_base"] * self.dynamic_long_threshold_multiplier.value),
             df["rolling_trend_scaled"] > df["rolling_trend_threshold_base"] * self.rolling_trend_threshold_multiplier.value,
-            df["vol_rank"] > 0.10,
-            df["prediction_confidence"] > df["confidence_threshold_base"] * self.confidence_threshold_multiplier.value
+            df["vol_rank"] > 0.10,  # Increased from 0.10 for stricter filtering
+            df["prediction_confidence"] > df["confidence_threshold_base"] * self.confidence_threshold_multiplier.value,
+            ~df["recent_stoploss_exit"]  # ✅ Prevent immediate re-entries
         ]
 
         enter_short_conditions = [
             df["do_predict"] == 1,
-            df["&-s_target"] < df["dynamic_short_threshold_base"] * self.dynamic_short_threshold_multiplier.value,
+            qtpylib.crossed_below(df["&-s_target"], df["dynamic_short_threshold_base"] * self.dynamic_short_threshold_multiplier.value),
             df["rolling_trend_scaled"] < df["rolling_trend_threshold_base"] * self.rolling_trend_threshold_multiplier.value,
-            df["vol_rank"] > 0.18,
-            df["prediction_confidence"] > df["confidence_threshold_base"] * self.confidence_threshold_multiplier.value
+            df["vol_rank"] > 0.15,  # Increased from 0.18 for stricter filtering
+            df["prediction_confidence"] > df["confidence_threshold_base"] * self.confidence_threshold_multiplier.value,
+            ~df["recent_stoploss_exit"]  # ✅ Prevent immediate re-entries
         ]
 
         df.loc[reduce(lambda x, y: x & y, enter_long_conditions), ["enter_long", "enter_tag"]] = (1, "long")
@@ -359,9 +352,11 @@ class ExampleLSTMStrategy_v3(IStrategy):
         df["exit_short"] = 0
         df["exit_long"] = 0
 
+        # ✅ Track Active Trades
         df["active_short_trade"] = (df["enter_short"].cumsum() - df["exit_short"].cumsum()) > 0
         df["active_long_trade"] = (df["enter_long"].cumsum() - df["exit_long"].cumsum()) > 0
 
+        # ✅ Timed Exit Logic (Ensure Trades Don’t Stay Open Indefinitely)
         df["timed_exit_long"] = (
             df["active_long_trade"] & (df["rolling_trend"].rolling(self.timed_exit_long_threshold.value).max().fillna(0) > 0.02)
         ).astype(int)
@@ -372,18 +367,18 @@ class ExampleLSTMStrategy_v3(IStrategy):
 
         strong_exit_long_conditions = [
             df["do_predict"] >= 0,
-            df["&-s_target"] < df["dynamic_exit_threshold_base"] * self.dynamic_exit_threshold_multiplier.value,
+            qtpylib.crossed_above(df["&-s_target"], df["dynamic_exit_threshold_base"] * self.dynamic_exit_threshold_multiplier.value),
             df["rolling_trend_scaled"] < df["exit_trend_threshold_base"] * self.exit_trend_threshold_multiplier.value,
-            df["timed_exit_long"] | (df["vol_rank"] > 0.70),
+            df["timed_exit_long"] | (df["vol_rank"] > df["vol_rank"].rolling(100).quantile(0.75)),  # ✅ Dynamically adjust volume threshold
             df["active_long_trade"],
             df["prediction_confidence"] > df["confidence_threshold_base"]
         ]
 
         strong_exit_short_conditions = [
             df["do_predict"] >= 0,
-            df["&-s_target"] > df["dynamic_exit_threshold_base"] * self.dynamic_exit_threshold_multiplier.value,
+            qtpylib.crossed_below(df["&-s_target"], df["dynamic_exit_threshold_base"] * self.dynamic_exit_threshold_multiplier.value),
             df["rolling_trend_scaled"] > df["exit_trend_threshold_base"] * self.exit_trend_threshold_multiplier.value,
-            df["timed_exit_short"] | (df["vol_rank"] > 0.65),
+            df["timed_exit_short"] | (df["vol_rank"] > df["vol_rank"].rolling(100).quantile(0.70)),  # ✅ Dynamically adjust volume threshold
             df["active_short_trade"],
             df["prediction_confidence"] > df["confidence_threshold_base"]
         ]
@@ -397,7 +392,7 @@ class ExampleLSTMStrategy_v3(IStrategy):
                         current_profit: float, **kwargs) -> float:
         dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
         if dataframe is None or dataframe.empty:
-            return self.stoploss
+            return self.stoploss  # Default stoploss
 
         last_candle = dataframe.iloc[-1]
         atr = last_candle.get('atr', 0)
@@ -405,29 +400,42 @@ class ExampleLSTMStrategy_v3(IStrategy):
         prediction_confidence = last_candle.get("prediction_confidence", 0.5)
 
         trade_duration = (current_time - trade.open_date_utc).total_seconds() / 3600  
-        max_loss_pct = min(0.03 + historical_volatility, 0.06) * self.max_risk_per_trade_multiplier.value
 
-        # ✅ Apply a soft stoploss for the first 6 hours to prevent early exits
-        if trade_duration < 6:
-            return -0.10  # Soft 10% stoploss early
+        # ✅ Use optimized Hyperopt parameters
+        soft_stoploss_pct = self.soft_stoploss_pct.value  # Dynamic soft stoploss
+        min_trade_duration = self.min_trade_duration.value  # Minimum time before stoploss applies
+        min_profit_for_trailing = self.min_profit_for_trailing.value  # When trailing stop activates
+        atr_multiplier = self.atr_stoploss_multiplier.value  # ATR scaling factor
+        max_risk_per_trade_multiplier = self.max_risk_per_trade_multiplier.value  # Max risk multiplier
 
-        # ✅ Less aggressive ATR-based stoploss
-        atr_multiplier = self.atr_multiplier.value * (
-            1.2 + historical_volatility if current_profit > 0.02 else
-            1.0 + historical_volatility if current_profit > 0.01 else
-            0.9 - prediction_confidence * 0.2 if current_profit < -0.01 else
-            1.0
-        )
-        stoploss_buffer = atr * atr_multiplier * 0.8  # Prevents aggressive tightening
+        # ✅ Apply ATR-based early stoploss buffer before full stoploss activates
+        if trade_duration < min_trade_duration:
+            return -atr * 1.5  # ✅ Adaptive early stoploss instead of static %
 
-        # ✅ Stoploss logic for longs and shorts
+        # ✅ Trailing stop only applies if trade reaches optimized profit threshold
+        if current_profit < min_profit_for_trailing:
+            return soft_stoploss_pct  # ✅ Keep loose stoploss if not profitable yet
+
+        # ✅ Use historical volatility to dynamically scale stoploss
+        dynamic_volatility_factor = 1 + historical_volatility * self.historical_volatility_factor.value  # ✅ More volatile markets get looser stoploss
+
+        # ✅ Use prediction confidence to fine-tune stoploss flexibility
+        confidence_factor = 1 - (prediction_confidence * self.prediction_confidence_factor.value)  # ✅ Less aggressive tightening for high-confidence trades
+
+        # ✅ ATR-based stoploss that adjusts dynamically
+        stoploss_buffer = atr * atr_multiplier * 2.5 * dynamic_volatility_factor * confidence_factor
+
+        # ✅ Set max stoploss dynamically based on market conditions
+        max_loss_pct = min(0.03 + historical_volatility * 1.5, 0.08) * max_risk_per_trade_multiplier  # ✅ Allow up to 8% stoploss
+
+        # ✅ Adjust stoploss logic for long and short trades
         if trade.is_short:
-            dynamic_stoploss = current_rate + stoploss_buffer * 1.3  # Give shorts more room
+            stoploss_value = current_rate + stoploss_buffer * 1.7  # ✅ More room for shorts
         else:
-            dynamic_stoploss = current_rate - stoploss_buffer * 1.1  # Slightly tighter for longs
+            stoploss_value = current_rate - stoploss_buffer * 1.4  # ✅ Slightly looser for longs
 
-        return -max_loss_pct if (trade.is_short and current_rate > trade.open_rate * (1 + max_loss_pct)) or \
-                            (not trade.is_short and current_rate < trade.open_rate * (1 - max_loss_pct)) else dynamic_stoploss
+        # ✅ Ensure stoploss never exceeds dynamic max loss threshold
+        return min(stoploss_value, -max_loss_pct)
 
     def custom_stake_amount(self, pair: str, current_time: datetime, current_rate: float, proposed_stake: float,
                             min_stake: float | None, max_stake: float, leverage: float, entry_tag: str | None, side: str, **kwargs) -> float:
@@ -548,47 +556,3 @@ class ExampleLSTMStrategy_v3(IStrategy):
         df.to_csv(output_path, index=False)
 
         logger.info(f"✅ Prediction metrics saved to {output_path}")
-
-    def remove_highly_correlated_features(self, dataframe: pd.DataFrame, threshold: float = 0.85) -> pd.DataFrame:
-        """
-        Removes features that are highly correlated with each other.
-        """
-
-        # ✅ Ensure only numeric columns are used for correlation calculation
-        numeric_df = dataframe.select_dtypes(include=[np.number])
-
-        # ✅ Compute absolute correlation matrix
-        corr_matrix = numeric_df.corr().abs()
-
-        # ✅ Identify upper triangle of correlation matrix
-        upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
-
-        # ✅ Find features to drop
-        to_drop = [column for column in upper.columns if any(upper[column] > threshold)]
-
-        logger.info(f"🔍 Removing {len(to_drop)} highly correlated features: {to_drop}")
-
-        # ✅ Drop correlated columns from original dataframe
-        dataframe.drop(columns=to_drop, inplace=True, errors="ignore")
-
-        return dataframe
-          
-    def filter_important_features(self, dataframe):
-        """
-        Removes all columns that start with '%' unless they are in the important features list.
-        """
-        important_features = {
-            "%-hour_of_day",
-            "%-day_of_week",
-            "%-cci-period_50_BTC/USDTUSDT_4h",
-            "%-pct-change_gen_BTC/USDTUSDT_1h",
-            "%-roc-period_20_BTC/USDTUSDT_2h",
-            "%-rsi-period_10_BTC/USDTUSDT_4h",
-            "%-rsi-period_50_ETH/USDTUSDT_4h"
-            # "%-bb_width-period_50_BTC/USDTUSDT_4h"
-        }
-
-        # Drop all columns starting with '%' unless they are in the important_features set
-        columns_to_keep = [col for col in dataframe.columns if not col.startswith("%") or col in important_features]
-        
-        return dataframe[columns_to_keep]
