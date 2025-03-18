@@ -66,7 +66,7 @@ Modify `config-torch-lstm_v2.json` to customize:
 
 ## Running Backtests
 ```bash
-freqtrade backtesting --config config-torch-lstm_v2.json --strategy ExampleLSTMStrategy_v2
+freqtrade backtesting --config config-torch-lstm_v2.json --strategy ExampleLSTMStrategy_v2 --freqaimodel PyTorchLSTMRegressor_v2 
 ```
 you can also use run.sh script for backtesting, plotting, or hyperopt freqai strategy
 
