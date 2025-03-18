@@ -15,7 +15,8 @@
 ✅ **Dynamic target scaling and market regime filtering**  
 ✅ **Backtesting and hyperparameter tuning support**  
 ✅ **Supports multiple timeframes (1h, 2h, 4h)**  
-✅ **Automated model training and retraining**  
+✅ **Automated model training and retraining** 
+✅ **Optimized for training on GPU/CPU** 
 ✅ **Optimized for Binance Futures Trading**  
 
 ## Installation
