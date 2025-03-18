@@ -62,7 +62,7 @@ Modify `config-torch-lstm_v2.json` to customize:
 - **LSTM Model Parameters** (`hidden_dim`, `num_lstm_layers`, `dropout`, etc.)
 - **Trading Settings** (Max trades, margin mode, stake size)
 - **model training parameters**
-- ** ... ***
+- ** ... **
 
 ## Running Backtests
 ```bash
