@@ -17,7 +17,7 @@
 ✅ **Supports multiple timeframes (1h, 2h, 4h)**  
 ✅ **Automated model training and retraining** 
 ✅ **Optimized for training on GPU/CPU** 
-✅ **Optimized for Binance Futures Trading**  
+✅ **Optimized for Binance Futures Trading**
 
 ## Installation
 ### 1️⃣ Install Freqtrade
