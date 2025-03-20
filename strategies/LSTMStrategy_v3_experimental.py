@@ -23,6 +23,7 @@ from freqtrade.exchange.exchange_utils import *
 from freqtrade.optimize.analysis import lookahead
 from freqtrade.strategy import IStrategy, IntParameter, RealParameter, CategoricalParameter
 from freqtrade.persistence import Trade
+from freqtrade.vendor.qtpylib.indicators import crossed_above, crossed_below
 
 logger = logging.getLogger(__name__)
 
@@ -104,27 +105,29 @@ class LSTMStrategy_v3_experimental(IStrategy):
     base_risk = RealParameter(0.005, 0.10, default=0.02, space="sell")  # ✅ Fix: Ensures base_risk exists
 
     # Optimized hyperopt parameters
+    # Buy hyperspace params:
     buy_params = {
-      "confidence_threshold_multiplier": 1.1701601425711687,
-      "dynamic_long_threshold_multiplier": 1.3219441445308204,
-      "dynamic_short_threshold_multiplier": 1.1290294998873471,
-      "rolling_trend_threshold_multiplier": 1.2848514610359465,
-      "stake_scaling_factor": 0.5919829374815355
+        "confidence_threshold_multiplier": 1.146,
+        "dynamic_long_threshold_multiplier": 0.93993,
+        "dynamic_short_threshold_multiplier": 0.99547,
+        "rolling_trend_threshold_multiplier": 1.77165,
+        "stake_scaling_factor": 1.03963,
     }
 
+    # Sell hyperspace params:
     sell_params = {
-      "atr_stoploss_multiplier": 1.0269897762060998,
-      "base_risk": 0.034496885726000424,
-      "dynamic_exit_threshold_multiplier": 0.6656376693951537,
-      "exit_trend_threshold_multiplier": 0.5490339906759605,
-      "historical_volatility_factor": 1.087924695663118,
-      "max_risk_per_trade_multiplier": 0.028352012538567967,
-      "min_profit_for_trailing": 0.022858314274675457,
-      "min_trade_duration": 8,
-      "prediction_confidence_factor": 0.7631294673706901,
-      "soft_stoploss_pct": -0.2189495571897381,
-      "timed_exit_long_threshold": 36,
-      "timed_exit_short_threshold": 24
+        "atr_stoploss_multiplier": 1.75324,
+        "base_risk": 0.04488,
+        "dynamic_exit_threshold_multiplier": 1.58154,
+        "exit_trend_threshold_multiplier": 0.58876,
+        "historical_volatility_factor": 1.0546,
+        "max_risk_per_trade_multiplier": 0.01053,
+        "min_profit_for_trailing": 0.02904,
+        "min_trade_duration": 6,
+        "prediction_confidence_factor": 0.88071,
+        "soft_stoploss_pct": -0.11058,
+        "timed_exit_long_threshold": 11,
+        "timed_exit_short_threshold": 22,
     }
 
     def feature_engineering_expand_all(self, dataframe: pd.DataFrame, period: int, metadata: Dict, **kwargs):
@@ -297,12 +300,12 @@ class LSTMStrategy_v3_experimental(IStrategy):
         dataframe["rolling_trend"] = dataframe["close"].pct_change(12).rolling(6).mean().fillna(0)
 
         # ✅ Improved ATR Scaling: Using Moving Percentile Instead of Min/Max
-        atr_window = 100
+        atr_window = 48
         dataframe["atr_scaled"] = dataframe["atr"] / dataframe["atr"].rolling(atr_window).quantile(0.90)
         dataframe["atr_scaled"] = dataframe["atr_scaled"].bfill().clip(0.05, 1)
 
         # ✅ Improved Rolling Trend Scaling: Adaptive Window + Normalization
-        trend_window = 100
+        trend_window = 48
         adaptive_window = int(min(trend_window, max(20, dataframe["atr"].rolling(50).mean().iloc[-1] * 10)))
         mean_trend = dataframe["rolling_trend"].rolling(adaptive_window).mean()
         std_trend = dataframe["rolling_trend"].rolling(adaptive_window).std()
@@ -338,24 +341,21 @@ class LSTMStrategy_v3_experimental(IStrategy):
         df["enter_short"] = 0
         df["enter_long"] = 0
 
-        # ✅ Ensure valid volume to prevent weak market trades
-        df["valid_volume"] = df["vol_rank"] > 0.20  # Increased from 0.15 for stricter filtering
-
-        # ✅ Fix: Ensure exit_reason exists before referencing it
-        df["stoploss_exit"] = df["exit_reason"].eq("stop_loss") if "exit_reason" in df else False
-        # ✅ Track recent stoploss exits to prevent immediate re-entries
-        df["stoploss_exit_cumsum"] = df["stoploss_exit"].cumsum()
-        df["stoploss_exit_time"] = df["stoploss_exit_cumsum"].where(df["stoploss_exit"], np.nan).ffill()
-        cooldown_candles = 1  # Prevent re-entry for 5 candles (5 hours in 1h timeframe)
-        df["recent_stoploss_exit"] = (df.index - df["stoploss_exit_time"]).fillna(pd.Timedelta("10 days")) < pd.Timedelta(hours=cooldown_candles)
+        # # ✅ Fix: Ensure exit_reason exists before referencing it
+        # df["stoploss_exit"] = df["exit_reason"].eq("stop_loss") if "exit_reason" in df else False
+        # # ✅ Track recent stoploss exits to prevent immediate re-entries
+        # df["stoploss_exit_cumsum"] = df["stoploss_exit"].cumsum()
+        # df["stoploss_exit_time"] = df["stoploss_exit_cumsum"].where(df["stoploss_exit"], np.nan).ffill()
+        # cooldown_candles = 1  # Prevent re-entry for 5 candles (5 hours in 1h timeframe)
+        # df["recent_stoploss_exit"] = (df.index - df["stoploss_exit_time"]).fillna(pd.Timedelta("10 days")) < pd.Timedelta(hours=cooldown_candles)
 
         enter_long_conditions = [
             df["do_predict"] == 1,
             df["&-s_target"] > (df["dynamic_long_threshold_base"] * self.dynamic_long_threshold_multiplier.value),
             df["rolling_trend_scaled"] > df["rolling_trend_threshold_base"] * self.rolling_trend_threshold_multiplier.value,
             df["vol_rank"] > 0.10,  # Increased from 0.10 for stricter filtering
-            df["prediction_confidence"] > df["confidence_threshold_base"] * self.confidence_threshold_multiplier.value,
-            ~df["recent_stoploss_exit"]  # ✅ Prevent immediate re-entries
+            df["prediction_confidence"] > df["confidence_threshold_base"] * self.confidence_threshold_multiplier.value
+            # ~df["recent_stoploss_exit"]  # ✅ Prevent immediate re-entries
         ]
 
         enter_short_conditions = [
@@ -363,8 +363,8 @@ class LSTMStrategy_v3_experimental(IStrategy):
             df["&-s_target"] < (df["dynamic_short_threshold_base"] * self.dynamic_short_threshold_multiplier.value),
             df["rolling_trend_scaled"] < df["rolling_trend_threshold_base"] * self.rolling_trend_threshold_multiplier.value,
             df["vol_rank"] > 0.15,  # Increased from 0.18 for stricter filtering
-            df["prediction_confidence"] > df["confidence_threshold_base"] * self.confidence_threshold_multiplier.value,
-            ~df["recent_stoploss_exit"]  # ✅ Prevent immediate re-entries
+            df["prediction_confidence"] > df["confidence_threshold_base"] * self.confidence_threshold_multiplier.value
+            # ~df["recent_stoploss_exit"]  # ✅ Prevent immediate re-entries
         ]
 
         df.loc[reduce(lambda x, y: x & y, enter_long_conditions), ["enter_long", "enter_tag"]] = (1, "long")
@@ -373,42 +373,45 @@ class LSTMStrategy_v3_experimental(IStrategy):
         return df
 
     def populate_exit_trend(self, df: DataFrame, metadata: dict) -> DataFrame:
-        df["exit_short"] = 0
-        df["exit_long"] = 0
-
-        # ✅ Track Active Trades
-        df["active_short_trade"] = (df["enter_short"].cumsum() - df["exit_short"].cumsum()) > 0
-        df["active_long_trade"] = (df["enter_long"].cumsum() - df["exit_long"].cumsum()) > 0
 
         # ✅ Timed Exit Logic (Ensure Trades Don’t Stay Open Indefinitely)
-        df["timed_exit_long"] = (
-            df["active_long_trade"] & (df["rolling_trend"].rolling(self.timed_exit_long_threshold.value).max().fillna(0) > 0.02)
-        ).astype(int)
+        # df["timed_exit_long"] = (
+        #     df["rolling_trend"].rolling(self.timed_exit_long_threshold.value).max().fillna(0) > 0.015
+        # ).astype(int)
 
-        df["timed_exit_short"] = (
-            df["active_short_trade"] & (df["rolling_trend"].rolling(self.timed_exit_short_threshold.value).min().fillna(0) < -0.01)
-        ).astype(int)
+        # df["timed_exit_short"] = (
+        #     df["rolling_trend"].rolling(self.timed_exit_short_threshold.value).min().fillna(0) < -0.015
+        # ).astype(int)
 
-        strong_exit_long_conditions = [
-            df["do_predict"] >= 0,
-            qtpylib.crossed_above(df["&-s_target"], df["dynamic_exit_threshold_base"] * self.dynamic_exit_threshold_multiplier.value),
-            df["rolling_trend_scaled"] < df["exit_trend_threshold_base"] * self.exit_trend_threshold_multiplier.value,
-            df["timed_exit_long"] | (df["vol_rank"] > df["vol_rank"].rolling(100).quantile(0.75)),  # ✅ Dynamically adjust volume threshold
-            df["active_long_trade"],
-            df["prediction_confidence"] > df["confidence_threshold_base"]
-        ]
+        # ✅ More Flexible Exit Logic
+        strong_exit_long_conditions = (
+            (df["do_predict"] == 1) &  
+            (
+                (qtpylib.crossed_below(df["&-s_target"], (df["dynamic_exit_threshold_base"] * self.dynamic_exit_threshold_multiplier.value))) |
+                (qtpylib.crossed_below(df["rolling_trend_scaled"], (df["exit_trend_threshold_base"] * self.exit_trend_threshold_multiplier.value))) 
+                # |
+                # (df["timed_exit_long"]) 
+                # |
+                # ((df["vol_rank"] > df["vol_rank"].rolling(100).quantile(0.75)) &  
+                # (df["prediction_confidence"] < df["confidence_threshold_base"] * self.confidence_threshold_multiplier.value))
+            )
+        )
 
-        strong_exit_short_conditions = [
-            df["do_predict"] >= 0,
-            qtpylib.crossed_below(df["&-s_target"], df["dynamic_exit_threshold_base"] * self.dynamic_exit_threshold_multiplier.value),
-            df["rolling_trend_scaled"] > df["exit_trend_threshold_base"] * self.exit_trend_threshold_multiplier.value,
-            df["timed_exit_short"] | (df["vol_rank"] > df["vol_rank"].rolling(100).quantile(0.70)),  # ✅ Dynamically adjust volume threshold
-            df["active_short_trade"],
-            df["prediction_confidence"] > df["confidence_threshold_base"]
-        ]
+        strong_exit_short_conditions = (
+            (df["do_predict"] == 1) &  
+            (
+                (qtpylib.crossed_above(df["&-s_target"], (df["dynamic_exit_threshold_base"] * self.dynamic_exit_threshold_multiplier.value))) |
+                (qtpylib.crossed_above(df["rolling_trend_scaled"], (df["exit_trend_threshold_base"] * self.exit_trend_threshold_multiplier.value))) 
+                # |
+                # (df["timed_exit_short"]) 
+                # |
+                # ((df["vol_rank"] > df["vol_rank"].rolling(100).quantile(0.70)) &  
+                # (df["prediction_confidence"] < df["confidence_threshold_base"] * self.confidence_threshold_multiplier.value))
+            )
+        )
 
-        df.loc[reduce(lambda x, y: x & y, strong_exit_long_conditions), ["exit_long", "exit_tag"]] = (1, "strong_exit_long")
-        df.loc[reduce(lambda x, y: x & y, strong_exit_short_conditions), ["exit_short", "exit_tag"]] = (1, "strong_exit_short")
+        df.loc[strong_exit_long_conditions, ["exit_long", "exit_tag"]] = (1, "strong_exit_long")
+        df.loc[strong_exit_short_conditions, ["exit_short", "exit_tag"]] = (1, "strong_exit_short")
 
         return df
 
