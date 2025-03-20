@@ -20,7 +20,7 @@
 ✅ **Optimized for Binance Futures Trading**
 
 ## Installation
-### 1️⃣ Install Freqtrade
+### 1️⃣ Install Freqtrade(full installation with all dependencies)
 ```bash
 # Clone and install Freqtrade
 git clone https://github.com/freqtrade/freqtrade.git
