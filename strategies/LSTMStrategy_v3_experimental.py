@@ -106,31 +106,32 @@ class LSTMStrategy_v3_experimental(IStrategy):
     stake_scaling_factor = RealParameter(0.4, 1.5, default=1.0, space="buy")
     base_risk = RealParameter(0.005, 0.10, default=0.02, space="sell")  # ✅ Fix: Ensures base_risk exists
 
-    # Optimized hyperopt parameters
     # Buy hyperspace params:
-    # buy_params = {
-    #     "confidence_threshold_multiplier": 1.146,
-    #     "dynamic_long_threshold_multiplier": 0.93993,
-    #     "dynamic_short_threshold_multiplier": 0.99547,
-    #     "rolling_trend_threshold_multiplier": 1.77165,
-    #     "stake_scaling_factor": 1.03963,
-    # }
+    buy_params = {
+        "confidence_threshold_multiplier": 1.00803,
+        "dynamic_long_threshold_multiplier": 0.73926,
+        "dynamic_short_threshold_multiplier": 1.123,
+        "rolling_trend_threshold_multiplier": 1.8687,
+        "stake_scaling_factor": 0.55956,
+        "use_trend_filter": False,
+    }
 
-    # # Sell hyperspace params:
-    # sell_params = {
-    #     "atr_stoploss_multiplier": 1.75324,
-    #     "base_risk": 0.04488,
-    #     "dynamic_exit_threshold_multiplier": 1.58154,
-    #     "exit_trend_threshold_multiplier": 0.58876,
-    #     "historical_volatility_factor": 1.0546,
-    #     "max_risk_per_trade_multiplier": 0.01053,
-    #     "min_profit_for_trailing": 0.02904,
-    #     "min_trade_duration": 6,
-    #     "prediction_confidence_factor": 0.88071,
-    #     "soft_stoploss_pct": -0.11058,
-    #     "timed_exit_long_threshold": 11,
-    #     "timed_exit_short_threshold": 22,
-    # }
+    # Sell hyperspace params:
+    sell_params = {
+        "atr_stoploss_multiplier": 2.65466,
+        "base_risk": 0.01773,
+        "dynamic_long_exit_threshold_multiplier": 0.50726,
+        "dynamic_short_exit_threshold_multiplier": 1.58387,
+        "exit_trend_threshold_multiplier": 0.49985,
+        "historical_volatility_factor": 0.85959,
+        "max_risk_per_trade_multiplier": 0.0475,
+        "min_profit_for_trailing": 0.05294,
+        "min_trade_duration": 19,
+        "prediction_confidence_factor": 0.77277,
+        "soft_stoploss_pct": -0.21564,
+        "timed_exit_long_threshold": 19,
+        "timed_exit_short_threshold": 35,
+    }
 
     def feature_engineering_expand_all(self, dataframe: pd.DataFrame, period: int, metadata: Dict, **kwargs):
         """
