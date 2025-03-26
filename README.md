@@ -15,8 +15,8 @@
 ✅ **Dynamic target scaling and market regime filtering**  
 ✅ **Backtesting and hyperparameter tuning support**  
 ✅ **Supports multiple timeframes (1h, 2h, 4h)**  
-✅ **Automated model training and retraining** 
-✅ **Optimized for training on GPU/CPU** 
+✅ **Automated model training and retraining**  
+✅ **Optimized for training on GPU/CPU**   
 ✅ **Optimized for Binance Futures Trading**
 
 ## Installation
@@ -74,7 +74,7 @@ you can also use run.sh script for backtesting, plotting, or hyperopt freqai str
 ## Contributions & Contact
 🤝 **Contributions are welcome!** If you have suggestions or improvements, feel free to submit a **pull request** or open an **issue**.
 
-📬 **Contact:** [GitHub Issues](https://github.com/GoodyNick/Freqai-Strategy/issues) or reach out on [Telegram](@GoodyNick)!
+📬 **Contact:** [GitHub Issues](https://github.com/GoodyNick/Freqai-Strategy/issues) or reach out on Telegram(@GoodyNick) or my [email](a.goodarzinick@gmail.com)!
 
 ## Support the Project
 Your support means a lot to me and helps keep this project alive! If you find this project useful or inspiring, consider making a donation(though absolutely not necessary!). Every contribution, no matter how small, is deeply meaningful and motivates me to continue improving and maintaining this work for everyone who uses it. Your donations will directly benefit the future development of this project, ensuring it remains free, open, and accessible to all. Thank you for being a part of this journey!
