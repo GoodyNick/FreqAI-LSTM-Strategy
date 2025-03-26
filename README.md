@@ -53,6 +53,7 @@ cp PyTorchLSTMModel_v2.py /freqtrade/freqtrade/freqai/torch/
 cp PyTorchLSTMRegressor_v2.py /freqtrade/user_data/freqaimodels/
 cp PyTorchModelTrainer_v2.py /freqtrade/freqtrade/freqai/torch/
 cp freqai_interface.py /freqtrade/freqtrade/freqai/
+cp BasePyTorchRegressor.py /freqtrade/freqtrade/freqai/base_models/
 ```
 Modify them as needed before running Freqtrade.
 
