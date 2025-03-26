@@ -79,7 +79,8 @@ you can also use run.sh script for backtesting, plotting, or hyperopt freqai str
 ## Support the Project
 Your support means a lot to me and helps keep this project alive! If you find this project useful or inspiring, consider making a donation(though absolutely not necessary!). Every contribution, no matter how small, is deeply meaningful and motivates me to continue improving and maintaining this work for everyone who uses it. Your donations will directly benefit the future development of this project, ensuring it remains free, open, and accessible to all. Thank you for being a part of this journey!
 
-*Metamask wallet address*
+*Metamask wallet address:*
+
 0x6AB1d47996f91f3Ad03071fBCE6Beb5187D2A48b
 
 ---
