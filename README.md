@@ -12,12 +12,12 @@
 
 ## Features
 ✅ **Uses LSTM for time-series forecasting**  
+✅ **Advanced feature engineering/filtering support**  
 ✅ **Dynamic target scaling and market regime filtering**  
 ✅ **Backtesting and hyperparameter tuning support**  
-✅ **Supports multiple timeframes (1h, 2h, 4h)**  
 ✅ **Automated model training and retraining**  
 ✅ **Optimized for training on GPU/CPU**   
-✅ **Optimized for Binance Futures Trading**
+✅ **Optimized for Futures market Trading**  
 
 ## Installation
 ### 1️⃣ Install Freqtrade(full installation with all dependencies)
