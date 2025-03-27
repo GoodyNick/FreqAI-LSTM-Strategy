@@ -149,7 +149,7 @@
     "jwt_secret_key": "somethingrandom",
     "CORS_origins": [],
     "username": "Freqtrader",
-    "password": "3D$m@x23",
+    "password": "freqpasswd",
     "ws_token": "sercet_Ws_t0ken"
   }
 }
