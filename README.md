@@ -14,6 +14,8 @@
 ✅ **Uses LSTM for time-series forecasting**  
 ✅ **Advanced feature engineering/filtering support**  
 ✅ **Dynamic target scaling and market regime filtering**  
+✅ **Helpful prediction metrics calculations and feature importance plot functionality**  
+✅ **Smart and tunable trade entry/exit, custom stop-loss, and custom stake amount design for profitability and advanced risk management**  
 ✅ **Backtesting and hyperparameter tuning support**  
 ✅ **Automated model training and retraining**  
 ✅ **Optimized for training on GPU/CPU**   
