@@ -75,7 +75,7 @@ freqtrade backtesting --config config-torch-lstm_v2.json --strategy ExampleLSTMS
 you can also use run.sh script for backtesting, plotting, or hyperopt freqai strategy
 
 ## Contributions & Contact
-🤝 **Contributions are welcome!** If you have suggestions or improvements, feel free to submit a **pull request** or open an **issue**.
+🤝 **Contributions are very welcome!** Please also share the results of your experminentations or any upgrades. If you have suggestions or improvements, feel free to submit a **pull request** or open an **issue**.
 
 📬 **Contact:** [GitHub Issues](https://github.com/GoodyNick/Freqai-Strategy/issues) or reach out on Telegram(@GoodyNick) or my email(a.goodarzinick@gmail.com)!
 
