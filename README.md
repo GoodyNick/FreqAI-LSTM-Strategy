@@ -8,7 +8,7 @@
 - **Execute trades based on AI-generated signals** to maximize profitability.
 - **Adapt dynamically to market conditions** using engineered features.
 
-🚨 **Work in Progress:** This strategy is still under active development and **is not meant for live trading with real money**. Use it for research and backtesting only.
+🚨 **Work in Progress:** This strategy is still under active development and **is not meant for live trading with real money**. Use it for research and backtesting only. I intend this project to be firstly used as a platform for research, experiments, and improvements.
 
 ## Features
 ✅ **Uses LSTM for time-series forecasting**  
