@@ -5,6 +5,7 @@ from typing import Dict, Optional
 import joblib
 import os
 from datetime import datetime
+import requests
 
 import numpy as np
 import pandas as pd
@@ -84,27 +85,28 @@ class LSTMStrategy_v33(IStrategy):
     prediction_metrics_storage = []  # Class-level storage for all pairs
 
     # hyperopt categorical parameters switch
-    hyperopt_categorical = False
+    hyperopt_categorical = True
 
     # ✅ Entry/Exit hyperopt parameters
     dynamic_long_threshold_multiplier = RealParameter(0.7, 1.5, default=1.0, space="buy", load=True, optimize=True)
     dynamic_short_threshold_multiplier = RealParameter(0.7, 1.5, default=1.0, space="buy", load=True, optimize=True)
     confidence_threshold_multiplier = RealParameter(0.3, 1.0, default=1.0, space="buy", load=True, optimize=True)
+    high_confidence_threshold = RealParameter(0.7, 0.95, default=0.85, space="buy", load=True, optimize=True)
     use_confidence_filter_entry = CategoricalParameter([True, False], default=True, space="buy", load=True, optimize=hyperopt_categorical)
-    dynamic_long_exit_threshold_multiplier = RealParameter(0.4, 2.0, default=1.0, space="sell", load=True, optimize=True)
-    dynamic_short_exit_threshold_multiplier = RealParameter(0.4, 2.0, default=1.0, space="sell", load=True, optimize=True)
-    exit_trend_threshold_multiplier = RealParameter(0.2, 0.6, default=0.35, space="sell", load=True, optimize=True)
     use_trend_filter = CategoricalParameter([True, False], default=True, space="buy", load=True, optimize=hyperopt_categorical)
     rolling_trend_threshold_multiplier = RealParameter(0.2, 2.0, default=1.1, space="buy", load=True, optimize=True)
+    leverage_scaling_factor = RealParameter(0.5, 2.0, default=1.0, space="buy", load=True, optimize=True)
+
+
+    # exit trend hyperopt parameters
+    dynamic_long_exit_threshold_multiplier = RealParameter(0.4, 2.0, default=1.0, space="sell", load=True, optimize=True)
+    dynamic_short_exit_threshold_multiplier = RealParameter(0.4, 2.0, default=1.0, space="sell", load=True, optimize=True)
     timed_exit_long_threshold = IntParameter(10, 40, default=20, space="sell", load=True, optimize=True)
     timed_exit_short_threshold = IntParameter(10, 40, default=20, space="sell", load=True, optimize=True)
-
-    # ✅ Enable optimization of only these categorical exit toggles:
+    exit_trend_threshold_multiplier = RealParameter(0.2, 0.6, default=0.35, space="sell", load=True, optimize=True)
     use_target_exit_filter = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)
     use_trend_exit_filter = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)
-    use_confidence_filter = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)
-    use_weak_exit = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)
-    use_volatility_exit_filter = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)
+    use_timed_exit = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)
 
     # ✅ Stoploss Hyperopt Parameters
     soft_stoploss_pct = RealParameter(-0.30, -0.01, default=-0.10, space="sell", load=True, optimize=True)
@@ -119,37 +121,35 @@ class LSTMStrategy_v33(IStrategy):
     stake_scaling_factor = RealParameter(0.4, 1.5, default=1.0, space="buy", load=True, optimize=True)
     base_risk = RealParameter(0.005, 0.10, default=0.02, space="sell", load=True, optimize=True)
 
-    # Buy hyperspace params(with hyperopt_categorical disabled):
+    # Buy hyperspace params:
     buy_params = {
-        "confidence_threshold_multiplier": 0.54144,
-        "dynamic_long_threshold_multiplier": 0.80237,
-        "dynamic_short_threshold_multiplier": 1.43423,
-        "rolling_trend_threshold_multiplier": 1.41188,
-        "stake_scaling_factor": 1.23503,
-        "use_confidence_filter_entry": True,  # value loaded from strategy
-        "use_trend_filter": True,  # value loaded from strategy
+        "confidence_threshold_multiplier": 0.62404,
+        "dynamic_long_threshold_multiplier": 1.20256,
+        "dynamic_short_threshold_multiplier": 1.48173,
+        "rolling_trend_threshold_multiplier": 0.83203,
+        "stake_scaling_factor": 1.45356,
+        "use_confidence_filter_entry": False,
+        "use_trend_filter": False,
     }
 
     # Sell hyperspace params:
     sell_params = {
-        "atr_stoploss_multiplier": 2.43939,
-        "base_risk": 0.05968,
-        "dynamic_long_exit_threshold_multiplier": 1.9044,
-        "dynamic_short_exit_threshold_multiplier": 0.89953,
-        "exit_trend_threshold_multiplier": 0.24831,
-        "historical_volatility_factor": 1.13118,
-        "max_risk_per_trade_multiplier": 0.023,
-        "min_profit_for_trailing": 0.03434,
-        "min_trade_duration": 8,
-        "prediction_confidence_factor": 0.94108,
-        "soft_stoploss_pct": -0.10659,
-        "timed_exit_long_threshold": 13,
-        "timed_exit_short_threshold": 15,
-        "use_confidence_filter": True,  # value loaded from strategy
-        "use_target_exit_filter": True,  # value loaded from strategy
-        "use_trend_exit_filter": True,  # value loaded from strategy
-        "use_volatility_exit_filter": True,  # value loaded from strategy
-        "use_weak_exit": True,  # value loaded from strategy
+        "atr_stoploss_multiplier": 2.85347,
+        "base_risk": 0.07642,
+        "dynamic_long_exit_threshold_multiplier": 0.9028,
+        "dynamic_short_exit_threshold_multiplier": 1.15029,
+        "exit_trend_threshold_multiplier": 0.2044,
+        "historical_volatility_factor": 0.86773,
+        "max_risk_per_trade_multiplier": 0.01267,
+        "min_profit_for_trailing": 0.02362,
+        "min_trade_duration": 14,
+        "prediction_confidence_factor": 0.87805,
+        "soft_stoploss_pct": -0.06259,
+        "timed_exit_long_threshold": 21,
+        "timed_exit_short_threshold": 18,
+        "use_target_exit_filter": False,
+        "use_trend_exit_filter": True,
+        "use_timed_exit": True,
     }
 
     def __init__(self, config: Dict, *args, **kwargs) -> None:
@@ -272,6 +272,17 @@ class LSTMStrategy_v33(IStrategy):
         zscore_columns = ["%-rolling_volatility", "%-rolling_mean", "%-fourier_price_norm"]
         for col in zscore_columns:
             dataframe.loc[:, f"{col}-zscore"] = pd.Series(zscore(dataframe[col]), index=dataframe.index).fillna(0)
+
+        # ✅ Incorporate order flow features
+        dataframe = self.get_order_flow_features(dataframe, metadata)
+        
+        # ✅ Fetch Fear & Greed Index
+        current_date = dataframe['date'].iloc[-1] if 'date' in dataframe else None
+        fear_greed_value, fear_greed_classification = self.get_fear_and_greed_index(current_date)
+        # ✅ Add Fear & Greed Index to DataFrame
+        dataframe['fear_greed_index'] = fear_greed_value
+        # ✅ Fill missing values (if any)
+        dataframe['fear_greed_index'] = dataframe['fear_greed_index'].ffill()
 
         logger.info(f"🔍 Total features before model training: {len(dataframe.columns)}")
 
@@ -414,7 +425,7 @@ class LSTMStrategy_v33(IStrategy):
         ] = (1, "long")
 
         # ─── Short Entry Logic ──────────────────────────
-        short_entry_condition = (df["do_predict"] == 1) & (df["vol_rank"] > 0.15)
+        short_entry_condition = (df["do_predict"] == 1) & (df["vol_rank"] > 0.10)
         if self.use_confidence_filter_entry.value:
             short_entry_condition &= (df["prediction_confidence"] > df["confidence_threshold_base"] * self.confidence_threshold_multiplier.value)
         if self.use_trend_filter.value:
@@ -428,7 +439,7 @@ class LSTMStrategy_v33(IStrategy):
         ] = (1, "short")
 
         # ─── Fallback Entry ─────────────────────────────
-        high_confidence = df["prediction_confidence"] > 0.85
+        high_confidence = df["prediction_confidence"] > self.high_confidence_threshold.value
 
         df.loc[
             (df["do_predict"] == 1) & (df["&-s_target"] > 0.01) & high_confidence & (df["enter_long"] == 0),
@@ -443,54 +454,55 @@ class LSTMStrategy_v33(IStrategy):
         return df
 
 
-    def populate_exit_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
+    def populate_exit_trend(self, df: DataFrame, metadata: dict) -> DataFrame:
         """
         Defines the exit signal for both long and short trades using crossed_above/below.
         """
 
-        dataframe['exit_long'] = False
-        dataframe['exit_short'] = False
+        df['exit_long'] = False
+        df['exit_short'] = False
 
         # 1. Target Reversal Exit (Primary)
         if self.use_target_exit_filter.value:
-            dataframe.loc[
-                crossed_below(dataframe['&-s_target'], (dataframe['dynamic_exit_threshold_base'] * self.dynamic_long_exit_threshold_multiplier.value)) &
-                (dataframe['prediction_confidence'] > self.confidence_threshold_multiplier.value),
+            df.loc[
+                crossed_below(df['&-s_target'], (df['dynamic_exit_threshold_base'] * self.dynamic_long_exit_threshold_multiplier.value)) &
+                (df['prediction_confidence'] > df["confidence_threshold_base"] * self.confidence_threshold_multiplier.value),
                 'exit_long'
             ] = True
-            dataframe.loc[
-                crossed_above(dataframe['&-s_target'], (dataframe['dynamic_exit_threshold_base'] * self.dynamic_short_exit_threshold_multiplier.value)) &
-                (dataframe['prediction_confidence'] > self.confidence_threshold_multiplier.value),
+            df.loc[
+                crossed_above(df['&-s_target'], (df['dynamic_exit_threshold_base'] * self.dynamic_short_exit_threshold_multiplier.value)) &
+                (df['prediction_confidence'] > df["confidence_threshold_base"] * self.confidence_threshold_multiplier.value),
                 'exit_short'
             ] = True
 
         # 2. Trend Reversal Exit (Secondary - if target exit not triggered)
-        if self.use_trend_filter.value:
-            dataframe.loc[
-                crossed_below(dataframe['rolling_trend'], (dataframe['rolling_trend_threshold_base'] * self.rolling_trend_threshold_multiplier.value)) &
-                (dataframe['exit_long'] == False),  # Only if target exit not triggered
+        if self.use_trend_exit_filter.value:
+            df.loc[
+                crossed_below(df['rolling_trend'], (df['rolling_trend_threshold_base'] * self.exit_trend_threshold_multiplier.value)) &
+                (df['exit_long'] == False),  # Only if target exit not triggered
                 'exit_long'
             ] = True
-            dataframe.loc[
-                crossed_above(dataframe['rolling_trend'], (dataframe['rolling_trend_threshold_base'] * self.rolling_trend_threshold_multiplier.value)) &
-                (dataframe['exit_short'] == False),  # Only if target exit not triggered
+            df.loc[
+                crossed_above(df['rolling_trend'], (df['rolling_trend_threshold_base'] * self.exit_trend_threshold_multiplier.value)) &
+                (df['exit_short'] == False),  # Only if target exit not triggered
                 'exit_short'
             ] = True
 
         # 3. Timed Exit (Tertiary - if other exits not triggered)
         # Timed exit doesn't lend itself well to crossed_above/below, so we keep it as is.
-        dataframe.loc[
-            (dataframe['trade_duration'] > self.timed_exit_long_threshold.value) &
-            (dataframe['exit_long'] == False),  # Only if other exits not triggered
-            'exit_long'
-        ] = True
-        dataframe.loc[
-            (dataframe['trade_duration'] > self.timed_exit_short_threshold.value) &
-            (dataframe['exit_short'] == False),  # Only if other exits not triggered
-            'exit_short'
-        ] = True
+        if self.use_timed_exit.value:
+            df.loc[
+                (df['trade_duration'] > self.timed_exit_long_threshold.value) &
+                (df['exit_long'] == False),  # Only if other exits not triggered
+                'exit_long'
+            ] = True
+            df.loc[
+                (df['trade_duration'] > self.timed_exit_short_threshold.value) &
+                (df['exit_short'] == False),  # Only if other exits not triggered
+                'exit_short'
+            ] = True
 
-        return dataframe
+        return df
 
     def custom_stoploss(self, pair: str, trade: 'Trade', current_time: datetime, current_rate: float,
                         current_profit: float, **kwargs) -> float:
@@ -567,19 +579,28 @@ class LSTMStrategy_v33(IStrategy):
                  proposed_leverage: float, max_leverage: float, entry_tag: str | None, side: str,
                  **kwargs) -> float:
         """
-        Customize leverage for each new trade. This method is only called in futures mode.
-
-        :param pair: Pair that's currently analyzed
-        :param current_time: datetime object, containing the current datetime
-        :param current_rate: Rate, calculated based on pricing settings in exit_pricing.
-        :param proposed_leverage: A leverage proposed by the bot.
-        :param max_leverage: Max leverage allowed on this pair
-        :param entry_tag: Optional entry_tag (buy_tag) if provided with the buy signal.
-        :param side: "long" or "short" - indicating the direction of the proposed trade
-        :return: A leverage amount, which is between 1.0 and max_leverage.
+        Customize leverage for each new trade based on market risk and prediction confidence.
         """
+        dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
+        if dataframe is None or dataframe.empty:
+            return 1.0  # Default leverage
+
+        last_candle = dataframe.iloc[-1]
+        historical_volatility = dataframe['close'].pct_change().rolling(50).std().iloc[-1] if not dataframe.empty else 0.01
+        prediction_confidence = last_candle.get("prediction_confidence", 0.5)
+
+        # ✅ Calculate leverage based on volatility and confidence
+        volatility_factor = 1 - historical_volatility  # Lower volatility -> higher leverage
+        confidence_factor = prediction_confidence  # Higher confidence -> higher leverage
+
+        # ✅ Apply hyperopt scaling factor
+        leverage_value = self.leverage_scaling_factor.value * volatility_factor * confidence_factor * max_leverage
+
+        # ✅ Clip leverage to be within the allowed range
+        leverage_value = int(min(max(1.0, leverage_value), max_leverage))
+
         # logger.info(f"[LEVERAGE] Pair: {pair} | Side: {side} | Confidence: {prediction_confidence:.2f} | Leverage: {leverage_value:.2f}")
-        return 1.0
+        return leverage_value
     
     def confirm_trade_entry(self, pair: str, order_type: str, amount: float, rate: float, time_in_force: str, 
                             current_time, entry_tag, side: str, **kwargs) -> bool:
@@ -683,3 +704,81 @@ class LSTMStrategy_v33(IStrategy):
         df.to_csv(output_path, index=False)
 
         logger.info(f"✅ Prediction metrics saved to {output_path}")
+
+    def get_order_flow_features(self, dataframe: DataFrame, metadata: Dict) -> DataFrame:
+        """
+        Calculates basic order flow features from trade data, using Freqtrade's built-in columns.
+        Handles potential errors gracefully.
+        """
+
+        try:
+            # ✅ Check if the required columns exist
+            if not all(col in dataframe.columns for col in ['trades_count', 'volume_weighted_average_price', 'buy_ratio']):
+                logger.warning(f"⚠️ Required order flow columns not found in dataframe for {metadata['pair']}. Skipping order flow features.")
+                dataframe['order_flow_volume'] = 0
+                dataframe['order_flow_buy_ratio'] = 0
+                return dataframe
+
+            # ✅ Calculate order flow volume (using volume_weighted_average_price * trades_count as a proxy)
+            # This is a simplified calculation; adjust as needed based on your data
+            dataframe['order_flow_volume'] = dataframe['volume_weighted_average_price'] * dataframe['trades_count']
+
+            # ✅ Use the built-in buy_ratio column
+            dataframe['order_flow_buy_ratio'] = dataframe['buy_ratio']
+
+            logger.info(f"✅ Successfully calculated order flow features for {metadata['pair']}.")
+
+        except Exception as e:
+            logger.exception(f"❌ Error calculating order flow features for {metadata['pair']}: {e}")
+            dataframe['order_flow_volume'] = 0
+            dataframe['order_flow_buy_ratio'] = 0
+
+        return dataframe
+    def load_historical_fng_data(self) -> pd.DataFrame | None:
+        """
+        Loads historical Fear & Greed Index data from a CSV file.
+        """
+        fng_data_path = self.config.get('fng_data_path')
+        if fng_data_path and os.path.exists(fng_data_path):
+            try:
+                fng_data = pd.read_csv(fng_data_path, index_col='timestamp', parse_dates=True)
+                print(f"✅ Loaded historical Fear & Greed Index data from {fng_data_path}")
+                return fng_data
+            except Exception as e:
+                print(f"❌ Error loading historical Fear & Greed Index data: {e}")
+                return None
+        else:
+            if fng_data_path:
+                print(f"❌ Historical Fear & Greed Index data file not found at {fng_data_path}")
+            else:
+                print("ℹ️ No historical Fear & Greed Index data path specified in config.")
+            return None
+
+    def get_fear_and_greed_index(self, current_date=None):
+        """
+        Fetches the Crypto Fear & Greed Index from Alternative.me or historical data.
+        """
+        if self.dp and self.dp.runmode in (RunMode.BACKTEST, RunMode.HYPEROPT) and self.historical_fng_data is not None:
+            # ✅ Use historical data during backtesting
+            if current_date in self.historical_fng_data.index:
+                row = self.historical_fng_data.loc[current_date]
+                return int(row['value']), row['value_classification']
+            else:
+                # Handle missing data in historical dataset
+                return None, None
+        else:
+            # ✅ Use API for live trading
+            try:
+                response = requests.get("https://api.alternative.me/fng/?limit=0")
+                response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+                data = response.json()
+                if data and data['data']:
+                    # Assuming you want the latest value
+                    latest_data = data['data'][0]
+                    logger.info(f"fng: {latest_data}")
+                    return int(latest_data['value']), latest_data['value_classification']
+                else:
+                    return None, None
+            except requests.exceptions.RequestException as e:
+                print(f"Error fetching Fear & Greed Index: {e}")
+                return None, None
