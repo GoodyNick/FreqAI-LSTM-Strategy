@@ -95,8 +95,7 @@ class LSTMStrategy_v33(IStrategy):
     use_confidence_filter_entry = CategoricalParameter([True, False], default=True, space="buy", load=True, optimize=hyperopt_categorical)
     use_trend_filter = CategoricalParameter([True, False], default=True, space="buy", load=True, optimize=hyperopt_categorical)
     rolling_trend_threshold_multiplier = RealParameter(0.2, 2.0, default=1.1, space="buy", load=True, optimize=True)
-    leverage_scaling_factor = RealParameter(0.5, 2.0, default=1.0, space="buy", load=True, optimize=True)
-
+    leverage_scaling_factor = RealParameter(0.01, 0.2, default=0.04, space="buy", load=True, optimize=True)
 
     # exit trend hyperopt parameters
     dynamic_long_exit_threshold_multiplier = RealParameter(0.4, 2.0, default=1.0, space="sell", load=True, optimize=True)
@@ -155,6 +154,8 @@ class LSTMStrategy_v33(IStrategy):
     def __init__(self, config: Dict, *args, **kwargs) -> None:
         super().__init__(config, *args, **kwargs)
         self.trades: Dict[str, datetime] = {}  # Initialize self.trades in the constructor
+        # ✅ Load historical Fear & Greed Index data if available
+        self.historical_fng_data = self.load_historical_fng_data()
 
     def feature_engineering_expand_all(self, dataframe: pd.DataFrame, period: int, metadata: Dict, **kwargs):
         """
@@ -275,7 +276,7 @@ class LSTMStrategy_v33(IStrategy):
 
         # ✅ Incorporate order flow features
         dataframe = self.get_order_flow_features(dataframe, metadata)
-        
+
         # ✅ Fetch Fear & Greed Index
         current_date = dataframe['date'].iloc[-1] if 'date' in dataframe else None
         fear_greed_value, fear_greed_classification = self.get_fear_and_greed_index(current_date)
@@ -583,6 +584,7 @@ class LSTMStrategy_v33(IStrategy):
         """
         dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
         if dataframe is None or dataframe.empty:
+            logger.warn(f"dataframe empty!")
             return 1.0  # Default leverage
 
         last_candle = dataframe.iloc[-1]
@@ -599,7 +601,8 @@ class LSTMStrategy_v33(IStrategy):
         # ✅ Clip leverage to be within the allowed range
         leverage_value = int(min(max(1.0, leverage_value), max_leverage))
 
-        # logger.info(f"[LEVERAGE] Pair: {pair} | Side: {side} | Confidence: {prediction_confidence:.2f} | Leverage: {leverage_value:.2f}")
+        logger.info(f"[LEVERAGE] Pair: {pair} | Side: {side} | Confidence: {prediction_confidence:.2f} | Leverage: {leverage_value:.2f}")
+        logger.info(f"[LEVERAGE] Vol: {volatility_factor:.2f} | Conf: {confidence_factor:.2f} | Max: {max_leverage:.2f}")
         return leverage_value
     
     def confirm_trade_entry(self, pair: str, order_type: str, amount: float, rate: float, time_in_force: str, 
