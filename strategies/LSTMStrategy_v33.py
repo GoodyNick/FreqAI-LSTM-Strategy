@@ -120,6 +120,12 @@ class LSTMStrategy_v33(IStrategy):
     stake_scaling_factor = RealParameter(0.4, 1.5, default=1.0, space="buy", load=True, optimize=True)
     base_risk = RealParameter(0.005, 0.10, default=0.02, space="sell", load=True, optimize=True)
 
+    # ✅ Leverage Hyperopt Parameters
+    leverage_range_start = 1
+    leverage_range_end = 5
+    volatility_influence = RealParameter(0.0, 0.5, default=0.2, space="buy", load=True, optimize=True)
+    confidence_influence = RealParameter(0.0, 0.5, default=0.2, space="buy", load=True, optimize=True)    
+
     # Buy hyperspace params:
     buy_params = {
         "confidence_threshold_multiplier": 0.62404,
@@ -516,7 +522,7 @@ class LSTMStrategy_v33(IStrategy):
         historical_volatility = dataframe['close'].pct_change().rolling(50).std().iloc[-1] if not dataframe.empty else 0.01
         prediction_confidence = last_candle.get("prediction_confidence", 0.5)
 
-        trade_duration = (current_time - trade.open_date_utc).total_seconds() / 3600  
+        trade_duration = (current_time - trade.open_date_utc).total_seconds() / 3600
 
         # ✅ Use optimized Hyperopt parameters
         soft_stoploss_pct = self.soft_stoploss_pct.value  # Dynamic soft stoploss
@@ -534,25 +540,27 @@ class LSTMStrategy_v33(IStrategy):
             return soft_stoploss_pct  # ✅ Keep loose stoploss if not profitable yet
 
         # ✅ Use historical volatility to dynamically scale stoploss
-        dynamic_volatility_factor = 1 + historical_volatility * self.historical_volatility_factor.value  # ✅ More volatile markets get looser stoploss
+        # Scale volatility to a reasonable range
+        scaled_volatility = min(historical_volatility, 0.05)  # Cap volatility at 5%
+        dynamic_volatility_factor = 1 + scaled_volatility * self.historical_volatility_factor.value  # ✅ More volatile markets get looser stoploss
 
         # ✅ Use prediction confidence to fine-tune stoploss flexibility
         confidence_factor = 1 - (prediction_confidence * self.prediction_confidence_factor.value)  # ✅ Less aggressive tightening for high-confidence trades
 
         # ✅ ATR-based stoploss that adjusts dynamically
-        stoploss_buffer = atr * atr_multiplier * 2.5 * dynamic_volatility_factor * confidence_factor
+        stoploss_buffer = atr * atr_multiplier * dynamic_volatility_factor * confidence_factor
 
         # ✅ Set max stoploss dynamically based on market conditions
-        max_loss_pct = min(0.03 + historical_volatility * 1.5, 0.08) * max_risk_per_trade_multiplier  # ✅ Allow up to 8% stoploss
+        max_loss_pct = min(0.03 + scaled_volatility * 1.5, 0.08) * max_risk_per_trade_multiplier  # ✅ Allow up to 8% stoploss
 
         # ✅ Adjust stoploss logic for long and short trades
         if trade.is_short:
-            stoploss_value = current_rate + stoploss_buffer * 1.7  # ✅ More room for shorts
+            stoploss_value = current_rate + stoploss_buffer 
         else:
-            stoploss_value = current_rate - stoploss_buffer * 1.4  # ✅ Slightly looser for longs
+            stoploss_value = current_rate - stoploss_buffer 
 
         # ✅ Ensure stoploss never exceeds dynamic max loss threshold
-        return min(stoploss_value, -max_loss_pct)
+        return min(stoploss_value, current_rate + max_loss_pct if trade.is_short else -max_loss_pct)
 
     def custom_stake_amount(self, pair: str, current_time: datetime, current_rate: float, proposed_stake: float,
                             min_stake: float | None, max_stake: float, leverage: float, entry_tag: str | None, side: str, **kwargs) -> float:
@@ -564,10 +572,17 @@ class LSTMStrategy_v33(IStrategy):
         atr = last_candle.get('atr', 0)
         historical_volatility = dataframe['close'].pct_change().rolling(50).std().iloc[-1] if not dataframe.empty else 0.01
 
-        adjusted_risk = self.base_risk.value * (1 + historical_volatility)
+        # ✅ Limit the range of historical volatility
+        scaled_volatility = min(historical_volatility, 0.05)  # Cap volatility at 5%
+
+        # ✅ Limit the range of ATR
+        scaled_atr = min(atr, current_rate * 0.1)  # Cap ATR at 10% of current rate
+
+        adjusted_risk = self.base_risk.value * (1 + scaled_volatility)
         max_risk = max_stake * adjusted_risk
 
-        stake_amount = (max_risk / (atr * leverage)) * self.stake_scaling_factor.value if atr > 0 else max_risk
+        # ✅ Refine stake amount calculation
+        stake_amount = (max_risk / (scaled_atr * leverage)) * self.stake_scaling_factor.value if scaled_atr > 0 else max_risk
         stake_amount = min(stake_amount, max_stake, proposed_stake)
         if min_stake and stake_amount < min_stake:
             stake_amount = min_stake
@@ -595,14 +610,27 @@ class LSTMStrategy_v33(IStrategy):
         volatility_factor = 1 - historical_volatility  # Lower volatility -> higher leverage
         confidence_factor = prediction_confidence  # Higher confidence -> higher leverage
 
-        # ✅ Apply hyperopt scaling factor
-        leverage_value = self.leverage_scaling_factor.value * volatility_factor * confidence_factor * max_leverage
+        # ✅ Define the leverage range
+        min_leverage = self.leverage_range_start
+        max_leverage = self.leverage_range_end
+
+        # ✅ Calculate the base leverage (midpoint of the range)
+        base_leverage = (min_leverage + max_leverage) / 2
+
+        # ✅ Adjust leverage based on volatility and confidence
+        leverage_adjustment = (
+            (volatility_factor - 0.5) * self.volatility_influence.value +
+            (confidence_factor - 0.5) * self.confidence_influence.value
+        ) * (max_leverage - min_leverage)
+
+        # ✅ Apply the adjustment to the base leverage
+        leverage_value = base_leverage + leverage_adjustment
 
         # ✅ Clip leverage to be within the allowed range
-        leverage_value = int(min(max(1.0, leverage_value), max_leverage))
+        leverage_value = int(min(max(min_leverage, leverage_value), max_leverage))
 
-        logger.info(f"[LEVERAGE] Pair: {pair} | Side: {side} | Confidence: {prediction_confidence:.2f} | Leverage: {leverage_value:.2f}")
-        logger.info(f"[LEVERAGE] Vol: {volatility_factor:.2f} | Conf: {confidence_factor:.2f} | Max: {max_leverage:.2f}")
+        # logger.info(f"[LEVERAGE] Pair: {pair} | Side: {side} | Confidence: {prediction_confidence:.2f} | Leverage: {leverage_value:.2f}")
+        
         return leverage_value
     
     def confirm_trade_entry(self, pair: str, order_type: str, amount: float, rate: float, time_in_force: str, 
