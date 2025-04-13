@@ -15,7 +15,7 @@
   "initial_state": "running",
   "trading_mode": "futures",
   "margin_mode": "isolated",
-  "max_open_trades": 2,
+  "max_open_trades": 10,
   "stake_currency": "USDT",
   "stake_amount": "unlimited",
   "tradable_balance_ratio": 0.99,
@@ -57,22 +57,23 @@
     "name": "bybit",
     "key": "ZlGAAFy0pzvaqFlBY0",
     "secret": "m5XluMWRrNyhW5DFQuycmcSJN7szGum3f8oe",
+    "use_public_trades": false,
     "ccxt_config": {},
     "ccxt_async_config": {
       "enableRateLimit": true,
       "rateLimit": 50
     },
     "pair_whitelist": [
-      "BTC/USDT:USDT",
-      "ETH/USDT:USDT",
-      "LTC/USDT:USDT",
-      "BNB/USDT:USDT",
-      "DOT/USDT:USDT",
-      "SOL/USDT:USDT",
-      "LINK/USDT:USDT",
-      "AVAX/USDT:USDT",
-      "DOGE/USDT:USDT",
-      "TON/USDT:USDT"
+      "BTC/USDT:USDT"
+      // "ETH/USDT:USDT",
+      // "LTC/USDT:USDT",
+      // "BNB/USDT:USDT",
+      // "DOT/USDT:USDT",
+      // "SOL/USDT:USDT",
+      // "LINK/USDT:USDT",
+      // "AVAX/USDT:USDT",
+      // "DOGE/USDT:USDT",
+      // "TON/USDT:USDT"
     ],
     "pair_blacklist": []
   },
