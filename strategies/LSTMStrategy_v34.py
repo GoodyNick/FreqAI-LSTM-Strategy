@@ -21,6 +21,7 @@ from scipy.stats import zscore
 
 from freqtrade import data
 from freqtrade.exchange.exchange_utils import *
+from freqtrade.exchange import timeframe_to_minutes
 from freqtrade.optimize.analysis import lookahead
 from freqtrade.strategy import IStrategy, IntParameter, RealParameter, CategoricalParameter
 from freqtrade.persistence import Trade
@@ -110,55 +111,58 @@ class LSTMStrategy_v34(IStrategy):
     use_timed_exit = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)
 
     # ✅ Stoploss Hyperopt Parameters
-    soft_stoploss_pct = RealParameter(-0.10, -0.01, default=-0.05, space="sell", load=True, optimize=True)
-    min_trade_duration = IntParameter(4, 24, default=12, space="sell", load=True, optimize=True)
-    min_profit_for_trailing = RealParameter(0.02, 0.06, default=0.04, space="sell", load=True, optimize=True)
-    atr_stoploss_multiplier = RealParameter(0.5, 3.0, default=1.0, space="sell", load=True, optimize=True)
-    historical_volatility_factor = RealParameter(0.3, 1.2, default=0.5, space="sell", load=True, optimize=True)
-    prediction_confidence_factor = RealParameter(0.2, 1.0, default=0.6, space="sell", load=True, optimize=True)
-    max_risk_per_trade_multiplier = RealParameter(0.003, 0.07, default=0.02, space="sell", load=True, optimize=True)
+    soft_stoploss_pct = RealParameter(-0.25, -0.03, default=-0.05, space="sell", load=True, optimize=True)
+    min_profit_for_trailing = RealParameter(0.001, 0.05, default=0.005, space="sell", load=True, optimize=True)
+    atr_stoploss_multiplier = RealParameter(1.0, 10.0, default=3.0, space="sell", load=True, optimize=True)
+    historical_volatility_factor = RealParameter(0.3, 1.2, default=0.5, space="sell", load=True, optimize=True) # Used in ATR-based calculation scaling
+    prediction_confidence_factor = RealParameter(0.2, 1.0, default=0.6, space="sell", load=True, optimize=True) # Used in ATR-based calculation scaling
+    max_loss_floor = RealParameter(0.01, 0.05, default=0.03, space="sell", load=True, optimize=True) # Min % for max loss cap
+    max_loss_ceiling = RealParameter(0.05, 0.15, default=0.08, space="sell", load=True, optimize=True) # Max % for max loss cap
+    max_loss_vol_multiplier = RealParameter(0.5, 5.0, default=2.0, space="sell", load=True, optimize=True) # Volatility sensitivity for max loss cap
+    initial_stop_duration_candles = IntParameter(1, 10, default=3, space="sell", load=True, optimize=True) # Duration in candles for initial stop
 
     # ✅ Stake amount hyperopt parameters
     stake_scaling_factor = RealParameter(0.4, 2.0, default=1.0, space="buy", load=True, optimize=True)
-    base_risk = RealParameter(0.005, 0.10, default=0.02, space="sell", load=True, optimize=True)
 
     # ✅ Leverage Hyperopt Parameters
     leverage_range_start = 1
-    leverage_range_end = 3
+    leverage_range_end = 5
     volatility_influence = RealParameter(0.0, 0.5, default=0.2, space="buy", load=True, optimize=True)
     confidence_influence = RealParameter(0.0, 0.5, default=0.2, space="buy", load=True, optimize=True)    
 
     # # Buy hyperspace params:
     # buy_params = {
-    #     "confidence_influence": 0.35009,
-    #     "confidence_threshold_multiplier": 0.73733,
-    #     "dynamic_long_threshold_multiplier": 0.95127,
-    #     "dynamic_short_threshold_multiplier": 0.58512,
-    #     "high_confidence_threshold": 0.91403,
-    #     "rolling_trend_threshold_multiplier": 1.66291,
-    #     "stake_scaling_factor": 1.70741,
-    #     "vol_rank_threshold": 0.39144,
-    #     "volatility_influence": 0.187,
-    #     "use_confidence_filter_entry": True,  # value loaded from strategy
-    #     "use_trend_filter": True,  # value loaded from strategy
+    #     "base_risk": 0.05071,
+    #     "confidence_influence": 0.04532,
+    #     "confidence_threshold_multiplier": 0.43721,
+    #     "dynamic_long_threshold_multiplier": 0.65036,
+    #     "dynamic_short_threshold_multiplier": 0.84277,
+    #     "high_confidence_threshold": 0.89692,
+    #     "rolling_trend_threshold_multiplier": 0.79379,
+    #     "stake_scaling_factor": 0.8746,
+    #     "use_confidence_filter_entry": True,
+    #     "use_trend_filter": True,
+    #     "vol_rank_threshold": 0.47073,
+    #     "volatility_influence": 0.28005,
     # }
 
     # # Sell hyperspace params:
     # sell_params = {
-    #     "atr_stoploss_multiplier": 0.58329,
-    #     "base_risk": 0.08675,
-    #     "dynamic_long_exit_threshold_multiplier": 0.68364,
-    #     "dynamic_short_exit_threshold_multiplier": 0.57702,
-    #     "historical_volatility_factor": 0.70908,
-    #     "max_risk_per_trade_multiplier": 0.03757,
-    #     "min_profit_for_trailing": 0.02375,
-    #     "min_trade_duration": 6,
-    #     "prediction_confidence_factor": 0.67451,
-    #     "timed_exit_long_threshold": 11,
-    #     "timed_exit_short_threshold": 20,
-    #     "use_target_exit_filter": True,  # value loaded from strategy
-    #     "use_timed_exit": True,  # value loaded from strategy
-    #     "use_trend_exit_filter": True,  # value loaded from strategy
+    #     "atr_stoploss_multiplier": 1.02987,
+    #     "dynamic_long_exit_threshold_multiplier": 0.97523,
+    #     "dynamic_short_exit_threshold_multiplier": 0.79514,
+    #     "historical_volatility_factor": 0.67703,
+    #     "max_loss_ceiling": 0.06973,
+    #     "max_loss_floor": 0.02332,
+    #     "max_loss_vol_multiplier": 2.13439,
+    #     "min_profit_for_trailing": 0.0416,
+    #     "prediction_confidence_factor": 0.86341,
+    #     "soft_stoploss_pct": -0.19217,
+    #     "timed_exit_long_threshold": 29,
+    #     "timed_exit_short_threshold": 26,
+    #     "use_target_exit_filter": True,
+    #     "use_timed_exit": True,
+    #     "use_trend_exit_filter": True,
     # }
 
     def __init__(self, config: Dict, *args, **kwargs) -> None:
@@ -498,7 +502,7 @@ class LSTMStrategy_v34(IStrategy):
         # ─── Long Entry Logic ───────────────────────────
         # Apply crossed_above for dynamic_long_threshold
         df.loc[
-            (df["&-s_target"] > df["long_threshold"]) &
+            crossed_above(df["&-s_target"], df["long_threshold"]) &
             combined_entry_condition(df, "long"),
             ["enter_long", "enter_tag"]
         ] = (1, "long")
@@ -506,7 +510,7 @@ class LSTMStrategy_v34(IStrategy):
         # ─── Short Entry Logic ──────────────────────────
         # Apply crossed_below for dynamic_short_threshold
         df.loc[
-            (df["&-s_target"] < df["short_threshold"]) &
+            crossed_below(df["&-s_target"], df["short_threshold"]) &
              combined_entry_condition(df, "short"),
             ["enter_short", "enter_tag"]
         ] = (1, "short")
@@ -583,82 +587,149 @@ class LSTMStrategy_v34(IStrategy):
             ] = (True, 'exit_short_timed')
 
         return df
-    
+
     def custom_stoploss(self, pair: str, trade: 'Trade', current_time: datetime, current_rate: float,
                         current_profit: float, **kwargs) -> float:
         dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
         if dataframe is None or dataframe.empty:
-            return self.stoploss  # Default stoploss
+            # logger.warning(f"Dataframe unavailable for {pair}. Keeping existing stoploss.")
+            return -1 # Keep existing stoploss
 
+        # Ensure trade open rate is valid
+        if not trade or not trade.open_rate:
+                logger.warning(f"Trade or open_rate unavailable for pair {pair}. Keeping existing stoploss.")
+                return -1 # Keep existing stoploss
+
+        # --- Get Data & Parameters ---
         last_candle = dataframe.iloc[-1]
         atr = last_candle.get('atr', 0)
+        if atr <= 0:
+                logger.warning(f"ATR is zero or negative for pair {pair}. Keeping existing stoploss.")
+                return -1 # Keep existing stoploss
+
         historical_volatility = dataframe['close'].pct_change().rolling(50).std().iloc[-1] if not dataframe.empty else 0.01
         prediction_confidence = last_candle.get("prediction_confidence", 0.5)
 
-        trade_duration = (current_time - trade.open_date_utc).total_seconds() / 3600  
+        # Calculate trade duration in candles using timeframe_to_minutes
+        tf_minutes = timeframe_to_minutes(self.timeframe)
+        trade_duration_candles = (current_time - trade.open_date_utc).total_seconds() / (tf_minutes * 60)
 
-        # ✅ Use optimized Hyperopt parameters
-        soft_stoploss_pct = self.soft_stoploss_pct.value  # Dynamic soft stoploss
-        min_trade_duration = self.min_trade_duration.value  # Minimum time before stoploss applies
-        min_profit_for_trailing = self.min_profit_for_trailing.value  # When trailing stop activates
-        atr_multiplier = self.atr_stoploss_multiplier.value  # ATR scaling factor
-        max_risk_per_trade_multiplier = self.max_risk_per_trade_multiplier.value  # Max risk multiplier
+        # Get hyperopt parameters (percentages are expected to be negative for stoploss)
+        soft_stoploss_pct = self.soft_stoploss_pct.value
+        initial_duration = self.initial_stop_duration_candles.value
+        min_profit_for_trailing = self.min_profit_for_trailing.value # Profit threshold
+        atr_multiplier = self.atr_stoploss_multiplier.value
+        historical_volatility_factor = self.historical_volatility_factor.value
+        prediction_confidence_factor = self.prediction_confidence_factor.value
+        max_loss_floor_val = self.max_loss_floor.value # Positive value (e.g., 0.03 for 3%)
+        max_loss_ceiling_val = self.max_loss_ceiling.value # Positive value (e.g., 0.08 for 8%)
+        max_loss_vol_multiplier_val = self.max_loss_vol_multiplier.value
 
-        # ✅ Apply ATR-based early stoploss buffer before full stoploss activates
-        if trade_duration < min_trade_duration:
-            return -atr * 1.5  # ✅ Adaptive early stoploss instead of static %
+        # --- Determine Stoploss Percentage ---
+        stoploss_pct_to_use: float
 
-        # ✅ Trailing stop only applies if trade reaches optimized profit threshold
-        if current_profit < min_profit_for_trailing:
-            return soft_stoploss_pct  # ✅ Keep loose stoploss if not profitable yet
+        # --- Initial Stoploss Phase ---
+        if trade_duration_candles < initial_duration:
+            stoploss_pct_to_use = soft_stoploss_pct
+            # logger.info(f"[Stoploss Initial] Pair: {pair} | Duration Candles: {trade_duration_candles:.1f} < {initial_duration} | Using Soft Stop Pct: {stoploss_pct_to_use:.4f}")
 
-        # ✅ Use historical volatility to dynamically scale stoploss
-        dynamic_volatility_factor = 1 + historical_volatility * self.historical_volatility_factor.value  # ✅ More volatile markets get looser stoploss
+        # --- Soft Stoploss Phase (After Initial Duration, Before Profit Target) ---
+        elif current_profit < min_profit_for_trailing:
+            stoploss_pct_to_use = soft_stoploss_pct
+            # logger.info(f"[Stoploss Soft] Pair: {pair} | Profit: {current_profit:.4f} < {min_profit_for_trailing:.4f} | Using Soft Stop Pct: {stoploss_pct_to_use:.4f}")
 
-        # ✅ Use prediction confidence to fine-tune stoploss flexibility
-        confidence_factor = 1 - (prediction_confidence * self.prediction_confidence_factor.value)  # ✅ Less aggressive tightening for high-confidence trades
-
-        # ✅ ATR-based stoploss that adjusts dynamically
-        stoploss_buffer = atr * atr_multiplier * 2.5 * dynamic_volatility_factor * confidence_factor
-
-        # ✅ Set max stoploss dynamically based on market conditions
-        max_loss_pct = min(0.03 + historical_volatility * 1.5, 0.08) * max_risk_per_trade_multiplier  # ✅ Allow up to 8% stoploss
-
-        # ✅ Adjust stoploss logic for long and short trades
-        if trade.is_short:
-            stoploss_value = current_rate + stoploss_buffer * 1.7  # ✅ More room for shorts
+        # --- Main Stoploss Calculation (After Initial Duration & Profit Target Met) ---
         else:
-            stoploss_value = current_rate - stoploss_buffer * 1.4  # ✅ Slightly looser for longs
+            dynamic_volatility_factor = 1 + historical_volatility * historical_volatility_factor
+            confidence_factor = 1 - (prediction_confidence * prediction_confidence_factor) # Lower buffer for high confidence
+            stoploss_buffer_abs = atr * atr_multiplier * dynamic_volatility_factor * confidence_factor
+            stoploss_pct_calculated = stoploss_buffer_abs / trade.open_rate # Positive value
+            # Ensure max loss values are positive for comparison
+            max_loss_abs_pct = min(max_loss_floor_val + historical_volatility * max_loss_vol_multiplier_val, max_loss_ceiling_val) # Positive value
 
-        # ✅ Ensure stoploss never exceeds dynamic max loss threshold
-        return min(stoploss_value, -max_loss_pct)
+            # final_stoploss_pct is the LARGER loss (closer to zero) between calculated and max_loss
+            # We need the negative percentage, so negate the positive calculated values
+            final_stoploss_pct = max(-stoploss_pct_calculated, -max_loss_abs_pct) # Result is negative
+
+            # Ensure the calculated percentage is actually negative
+            if final_stoploss_pct >= 0:
+                # logger.info(f"[Stoploss Error] Pair: {pair} | Calculated positive stoploss {final_stoploss_pct:.4f}. Using soft stoploss {soft_stoploss_pct:.4f} instead.")
+                stoploss_pct_to_use = soft_stoploss_pct # Fallback to soft stoploss percentage
+            else:
+                stoploss_pct_to_use = final_stoploss_pct
+                # logger.info(
+                #     f"[Stoploss Main] Pair: {pair} | DVF: {dynamic_volatility_factor:.4f} | CF: {confidence_factor:.4f} | "
+                #     f"Buffer Abs: {stoploss_buffer_abs:.4f} | Calc SL %: {-stoploss_pct_calculated:.4f} | "
+                #     f"Max Loss %: {-max_loss_abs_pct:.4f} | Final SL Pct: {stoploss_pct_to_use:.4f} | "
+                #     f"Profit: {current_profit:.2f} | Duration Candles: {trade_duration_candles:.1f}"
+                # )
+
+        # --- Convert Percentage to Absolute Price ---
+        # Ensure the percentage is negative before applying
+        if stoploss_pct_to_use >= 0:
+                logger.warning(f"Stoploss percentage {stoploss_pct_to_use:.4f} is not negative for {pair}. Using soft stoploss percentage {soft_stoploss_pct:.4f}.")
+                stoploss_pct_to_use = soft_stoploss_pct
+
+        # Calculate the absolute stop price based on the open rate
+        stop_price = trade.open_rate * (1 + stoploss_pct_to_use)
+
+        # logger.info(f"[Stoploss Final] Pair: {pair} | Using SL Pct: {stoploss_pct_to_use:.4f} | Open Rate: {trade.open_rate:.4f} | Stop Price: {stop_price:.4f}")
+
+        # Return the absolute stop price
+        return stop_price
 
     def custom_stake_amount(self, pair: str, current_time: datetime, current_rate: float, proposed_stake: float,
                             min_stake: float | None, max_stake: float, leverage: float, entry_tag: str | None, side: str, **kwargs) -> float:
         dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
         if dataframe is None or dataframe.empty:
+            logger.warning(f"Dataframe unavailable for {pair}. Using proposed stake: {proposed_stake}")
             return proposed_stake
 
         last_candle = dataframe.iloc[-1]
-        atr = last_candle.get('atr', 0)
+        prediction_confidence = last_candle.get("prediction_confidence", 0.5)
         historical_volatility = dataframe['close'].pct_change().rolling(50).std().iloc[-1] if not dataframe.empty else 0.01
 
-        # ✅ Limit the range of historical volatility
-        scaled_volatility = min(historical_volatility, 0.05)  # Cap volatility at 5%
+        # Cap volatility for stability in calculation
+        scaled_volatility = min(historical_volatility, 0.05)
 
-        # ✅ Limit the range of ATR
-        scaled_atr = min(atr, current_rate * 0.1)  # Cap ATR at 10% of current rate
+        # --- Adjust proposed_stake based on confidence and volatility ---
 
-        adjusted_risk = self.base_risk.value * (1 + scaled_volatility)
-        max_risk = max_stake * adjusted_risk
+        # Confidence Factor: Scales stake based on prediction confidence.
+        # Centered around 1.0. Higher confidence -> higher factor. Uses confidence_influence hyperparam.
+        conf_influence = self.confidence_influence.value
+        # Scale influence range: (prediction_confidence - 0.5) is [-0.5, 0.5]. Multiply by 2*influence to get range [-influence, +influence] around 1.0
+        confidence_factor = 1.0 + (prediction_confidence - 0.5) * conf_influence * 2
 
-        # ✅ Refine stake amount calculation
-        stake_amount = (max_risk / (scaled_atr * leverage)) * self.stake_scaling_factor.value if scaled_atr > 0 else max_risk
-        stake_amount = min(stake_amount, max_stake, proposed_stake)
+        # Volatility Factor: Scales stake inversely based on volatility.
+        # Centered around 1.0. Higher volatility -> lower factor. Uses volatility_influence hyperparam.
+        vol_influence = self.volatility_influence.value
+        # Use (1 - vol * influence * scale_factor) to decrease stake with volatility.
+        # Scale vol_influence impact (e.g., by 10) as scaled_volatility is small. Ensure factor > 0.
+        volatility_factor = max(0.1, 1.0 - (scaled_volatility * vol_influence * 10)) # Ensure factor doesn't go below 0.1
+
+        # Start with proposed stake and apply adjustments
+        stake_amount = proposed_stake * confidence_factor * volatility_factor
+
+        # Apply the general stake scaling factor
+        stake_amount *= self.stake_scaling_factor.value
+
+        # --- Apply Constraints ---
+        # Ensure stake is within min/max bounds provided by Freqtrade
+        stake_amount = min(stake_amount, max_stake) # Cap at exchange/balance max
+
+        # Ensure stake meets minimum requirement
         if min_stake and stake_amount < min_stake:
+            # logger.info(f"[STAKE MIN] Pair: {pair} | Calculated: {stake_amount:.2f} < Min: {min_stake:.2f}. Using Min.")
             stake_amount = min_stake
+        # Re-check max_stake cap after potential min_stake adjustment
+        stake_amount = min(stake_amount, max_stake)
 
-        # logger.info(f"[STAKE] Pair: {pair} | ATR: {atr:.4f} | HV: {historical_volatility:.4f} | Risk: {adjusted_risk:.4f} | Stake: {stake_amount:.2f}")
+
+        # logger.info(
+        #     f"[STAKE ADJUSTED] Pair: {pair} | Proposed: {proposed_stake:.2f} | HV: {historical_volatility:.4f} | Conf: {prediction_confidence:.2f} | "
+        #     f"Conf Factor: {confidence_factor:.3f} | Vol Factor: {volatility_factor:.3f} | Scaling: {self.stake_scaling_factor.value:.2f} | "
+        #     f"Final: {stake_amount:.2f} (Min: {min_stake}, Max: {max_stake})"
+        # )
 
         return stake_amount
 
@@ -670,7 +741,7 @@ class LSTMStrategy_v34(IStrategy):
         """
         dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
         if dataframe is None or dataframe.empty:
-            logger.warn(f"dataframe empty!")
+            logger.warning(f"dataframe empty!")
             return 1.0  # Default leverage
 
         last_candle = dataframe.iloc[-1]
@@ -683,7 +754,7 @@ class LSTMStrategy_v34(IStrategy):
 
         # ✅ Define the leverage range
         min_leverage = self.leverage_range_start
-        max_leverage = self.leverage_range_end
+        strategy_max_leverage = self.leverage_range_end
 
         # ✅ Calculate the base leverage (midpoint of the range)
         base_leverage = (min_leverage + max_leverage) / 2
@@ -698,11 +769,11 @@ class LSTMStrategy_v34(IStrategy):
         leverage_value = base_leverage + leverage_adjustment
 
         # ✅ Clip leverage to be within the allowed range
-        leverage_value = int(min(max(min_leverage, leverage_value), max_leverage))
+        leverage_value = int(min(max(min_leverage, leverage_value), strategy_max_leverage, max_leverage))
 
         # logger.info(f"[LEVERAGE] Pair: {pair} | Side: {side} | Confidence: {prediction_confidence:.2f} | Leverage: {leverage_value:.2f}")
 
-        return 1.0
+        return leverage_value
     
     def confirm_trade_entry(self, pair: str, order_type: str, amount: float, rate: float, time_in_force: str, 
                             current_time, entry_tag, side: str, **kwargs) -> bool:
