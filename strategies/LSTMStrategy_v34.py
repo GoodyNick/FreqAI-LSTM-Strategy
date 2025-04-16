@@ -9,6 +9,7 @@ import requests
 
 import numpy as np
 import pandas as pd
+from sympy import use
 import talib.abstract as ta
 from technical.qtpylib import crossed
 
@@ -89,7 +90,10 @@ class LSTMStrategy_v34(IStrategy):
     prediction_metrics_storage = []  # Class-level storage for all pairs
 
     # hyperopt categorical parameters switch
-    hyperopt_categorical = True
+    hyperopt_categorical = False
+
+    # use leverage
+    use_leverage = True
 
     # ✅ Entry hyperopt parameters
     dynamic_long_threshold_multiplier = RealParameter(0.5, 1.2, default=1.0, space="buy", load=True, optimize=True)
@@ -126,43 +130,43 @@ class LSTMStrategy_v34(IStrategy):
 
     # ✅ Leverage Hyperopt Parameters
     leverage_range_start = 1
-    leverage_range_end = 5
-    volatility_influence = RealParameter(0.0, 0.5, default=0.2, space="buy", load=True, optimize=True)
-    confidence_influence = RealParameter(0.0, 0.5, default=0.2, space="buy", load=True, optimize=True)    
+    leverage_range_end = IntParameter(1, 10, default=3, space="buy", load=True, optimize=use_leverage)
+    volatility_influence = RealParameter(0.0, 0.5, default=0.2, space="buy", load=True, optimize=use_leverage)
+    confidence_influence = RealParameter(0.0, 0.5, default=0.2, space="buy", load=True, optimize=use_leverage)    
 
     # # Buy hyperspace params:
     # buy_params = {
-    #     "base_risk": 0.05071,
-    #     "confidence_influence": 0.04532,
-    #     "confidence_threshold_multiplier": 0.43721,
-    #     "dynamic_long_threshold_multiplier": 0.65036,
-    #     "dynamic_short_threshold_multiplier": 0.84277,
-    #     "high_confidence_threshold": 0.89692,
-    #     "rolling_trend_threshold_multiplier": 0.79379,
-    #     "stake_scaling_factor": 0.8746,
-    #     "use_confidence_filter_entry": True,
+    #     "confidence_influence": 0.48319,
+    #     "confidence_threshold_multiplier": 0.195,
+    #     "dynamic_long_threshold_multiplier": 1.14174,
+    #     "dynamic_short_threshold_multiplier": 0.57992,
+    #     "high_confidence_threshold": 0.8922,
+    #     "rolling_trend_threshold_multiplier": 1.9719,
+    #     "stake_scaling_factor": 1.99029,
+    #     "use_confidence_filter_entry": False,
     #     "use_trend_filter": True,
-    #     "vol_rank_threshold": 0.47073,
-    #     "volatility_influence": 0.28005,
+    #     "vol_rank_threshold": 0.13213,
+    #     "volatility_influence": 0.04417,
     # }
 
     # # Sell hyperspace params:
     # sell_params = {
-    #     "atr_stoploss_multiplier": 1.02987,
-    #     "dynamic_long_exit_threshold_multiplier": 0.97523,
-    #     "dynamic_short_exit_threshold_multiplier": 0.79514,
-    #     "historical_volatility_factor": 0.67703,
-    #     "max_loss_ceiling": 0.06973,
-    #     "max_loss_floor": 0.02332,
-    #     "max_loss_vol_multiplier": 2.13439,
-    #     "min_profit_for_trailing": 0.0416,
-    #     "prediction_confidence_factor": 0.86341,
-    #     "soft_stoploss_pct": -0.19217,
-    #     "timed_exit_long_threshold": 29,
-    #     "timed_exit_short_threshold": 26,
-    #     "use_target_exit_filter": True,
-    #     "use_timed_exit": True,
-    #     "use_trend_exit_filter": True,
+    #     "atr_stoploss_multiplier": 4.78351,
+    #     "dynamic_long_exit_threshold_multiplier": 0.73628,
+    #     "dynamic_short_exit_threshold_multiplier": 1.47669,
+    #     "historical_volatility_factor": 0.60757,
+    #     "initial_stop_duration_candles": 1,
+    #     "max_loss_ceiling": 0.11955,
+    #     "max_loss_floor": 0.02316,
+    #     "max_loss_vol_multiplier": 3.94385,
+    #     "min_profit_for_trailing": 0.04275,
+    #     "prediction_confidence_factor": 0.55528,
+    #     "soft_stoploss_pct": -0.1028,
+    #     "timed_exit_long_threshold": 30,
+    #     "timed_exit_short_threshold": 12,
+    #     "use_target_exit_filter": False,
+    #     "use_timed_exit": False,
+    #     "use_trend_exit_filter": False,
     # }
 
     def __init__(self, config: Dict, *args, **kwargs) -> None:
@@ -511,7 +515,7 @@ class LSTMStrategy_v34(IStrategy):
         # Apply crossed_below for dynamic_short_threshold
         df.loc[
             crossed_below(df["&-s_target"], df["short_threshold"]) &
-             combined_entry_condition(df, "short"),
+            combined_entry_condition(df, "short"),
             ["enter_short", "enter_tag"]
         ] = (1, "short")
     
@@ -665,13 +669,15 @@ class LSTMStrategy_v34(IStrategy):
                 # )
 
         # --- Convert Percentage to Absolute Price ---
-        # Ensure the percentage is negative before applying
-        if stoploss_pct_to_use >= 0:
-                logger.warning(f"Stoploss percentage {stoploss_pct_to_use:.4f} is not negative for {pair}. Using soft stoploss percentage {soft_stoploss_pct:.4f}.")
-                stoploss_pct_to_use = soft_stoploss_pct
-
-        # Calculate the absolute stop price based on the open rate
-        stop_price = trade.open_rate * (1 + stoploss_pct_to_use)
+        # Calculate the absolute stop price based on the open rate AND trade direction
+        if trade.is_short:
+            # For SHORT trades, stoploss is ABOVE open rate.
+            # Since stoploss_pct_to_use is negative, we subtract it (effectively adding a positive percentage)
+            stop_price = trade.open_rate * (1 - stoploss_pct_to_use)
+            # Alternative clearer way: stop_price = trade.open_rate * (1 + abs(stoploss_pct_to_use))
+        else:
+            # For LONG trades, stoploss is BELOW open rate.
+            stop_price = trade.open_rate * (1 + stoploss_pct_to_use)
 
         # logger.info(f"[Stoploss Final] Pair: {pair} | Using SL Pct: {stoploss_pct_to_use:.4f} | Open Rate: {trade.open_rate:.4f} | Stop Price: {stop_price:.4f}")
 
@@ -754,10 +760,10 @@ class LSTMStrategy_v34(IStrategy):
 
         # ✅ Define the leverage range
         min_leverage = self.leverage_range_start
-        strategy_max_leverage = self.leverage_range_end
+        strategy_max_leverage = self.leverage_range_end.value
 
         # ✅ Calculate the base leverage (midpoint of the range)
-        base_leverage = (min_leverage + max_leverage) / 2
+        base_leverage = (min_leverage + strategy_max_leverage) / 2
 
         # ✅ Adjust leverage based on volatility and confidence
         leverage_adjustment = (
@@ -772,8 +778,10 @@ class LSTMStrategy_v34(IStrategy):
         leverage_value = int(min(max(min_leverage, leverage_value), strategy_max_leverage, max_leverage))
 
         # logger.info(f"[LEVERAGE] Pair: {pair} | Side: {side} | Confidence: {prediction_confidence:.2f} | Leverage: {leverage_value:.2f}")
-
-        return leverage_value
+        if self.use_leverage:
+            return leverage_value
+        else: 
+            return 1.0
     
     def confirm_trade_entry(self, pair: str, order_type: str, amount: float, rate: float, time_in_force: str, 
                             current_time, entry_tag, side: str, **kwargs) -> bool:
