@@ -47,7 +47,6 @@ class LSTMStrategy_v34(IStrategy):
                 "True Label": {"color": "blue", "plot_type": "line"},  # Rename T to "True Label"
                 "Prediction": {"color": "red", "plot_type": "line"},  # Rename "&-s_target" to "Prediction"
                 "Avg Prediction": {"color": "green", "plot_type": "line"},  # Rename "&-s_target_mean" to "Avg Prediction"
-                "rolling_accuracy": {"color": "purple", "plot_type": "scatter"},  # Plot rolling accuracy
                 "long_threshold": {"color": "green", "plot_type": "line"},
                 "short_threshold": {"color": "red", "plot_type": "line"},
             },
@@ -90,29 +89,32 @@ class LSTMStrategy_v34(IStrategy):
     prediction_metrics_storage = []  # Class-level storage for all pairs
 
     # hyperopt categorical parameters switch
-    hyperopt_categorical = False
+    hyperopt_categorical = True
 
     # use leverage
-    use_leverage = True
+    use_leverage = False
 
     # ✅ Entry hyperopt parameters
     dynamic_long_threshold_multiplier = RealParameter(0.5, 1.2, default=1.0, space="buy", load=True, optimize=True)
     dynamic_short_threshold_multiplier = RealParameter(0.5, 1.2, default=1.0, space="buy", load=True, optimize=True)
-    confidence_threshold_multiplier = RealParameter(0.1, 1.0, default=1.0, space="buy", load=True, optimize=True)
+    vol_rank_threshold = RealParameter(0.05, 0.5, default=0.25, space="buy", load=True, optimize=True)
     high_confidence_threshold = RealParameter(0.7, 0.95, default=0.85, space="buy", load=True, optimize=True)
     use_confidence_filter_entry = CategoricalParameter([True, False], default=True, space="buy", load=True, optimize=hyperopt_categorical)
+    confidence_threshold_multiplier = RealParameter(0.1, 1.0, default=1.0, space="buy", load=True, optimize=True)
     use_trend_filter = CategoricalParameter([True, False], default=True, space="buy", load=True, optimize=hyperopt_categorical)
     rolling_trend_threshold_multiplier = RealParameter(0.2, 2.0, default=1.0, space="buy", load=True, optimize=True)
-    vol_rank_threshold = RealParameter(0.05, 0.5, default=0.25, space="buy", load=True, optimize=True)
+    vol_window = IntParameter(5, 100, default=24, space="buy", load=True, optimize=True)  # Window for volatility calculation
+    trend_window = IntParameter(5, 100, default=48, space="buy", load=True, optimize=True)  # Window for trend calculation
 
     # Exit trend hyperopt parameters
+    use_target_exit_filter = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)    
     dynamic_long_exit_threshold_multiplier = RealParameter(0.5, 1.5, default=1.0, space="sell", load=True, optimize=True)
     dynamic_short_exit_threshold_multiplier = RealParameter(0.5, 1.5, default=1.0, space="sell", load=True, optimize=True)
-    timed_exit_long_threshold = IntParameter(10, 30, default=20, space="sell", load=True, optimize=True)
-    timed_exit_short_threshold = IntParameter(10, 30, default=20, space="sell", load=True, optimize=True)
-    use_target_exit_filter = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)
     use_trend_exit_filter = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)
+    trend_exit_threshold_multiplier = RealParameter(0.2, 2.0, default=1.0, space="sell", load=True, optimize=True)
     use_timed_exit = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)
+    timed_exit_long_threshold = IntParameter(10, 100, default=20, space="sell", load=True, optimize=True)
+    timed_exit_short_threshold = IntParameter(10, 100, default=20, space="sell", load=True, optimize=True)
 
     # ✅ Stoploss Hyperopt Parameters
     soft_stoploss_pct = RealParameter(-0.25, -0.03, default=-0.05, space="sell", load=True, optimize=True)
@@ -121,52 +123,56 @@ class LSTMStrategy_v34(IStrategy):
     historical_volatility_factor = RealParameter(0.3, 1.2, default=0.5, space="sell", load=True, optimize=True) # Used in ATR-based calculation scaling
     prediction_confidence_factor = RealParameter(0.2, 1.0, default=0.6, space="sell", load=True, optimize=True) # Used in ATR-based calculation scaling
     max_loss_floor = RealParameter(0.01, 0.05, default=0.03, space="sell", load=True, optimize=True) # Min % for max loss cap
-    max_loss_ceiling = RealParameter(0.05, 0.15, default=0.08, space="sell", load=True, optimize=True) # Max % for max loss cap
+    max_loss_ceiling = RealParameter(0.05, 0.25, default=0.08, space="sell", load=True, optimize=True) # Max % for max loss cap
     max_loss_vol_multiplier = RealParameter(0.5, 5.0, default=2.0, space="sell", load=True, optimize=True) # Volatility sensitivity for max loss cap
     initial_stop_duration_candles = IntParameter(1, 10, default=3, space="sell", load=True, optimize=True) # Duration in candles for initial stop
 
     # ✅ Stake amount hyperopt parameters
-    stake_scaling_factor = RealParameter(0.4, 2.0, default=1.0, space="buy", load=True, optimize=True)
+    stake_scaling_factor = RealParameter(0.1, 2.0, default=1.0, space="buy", load=True, optimize=True)
 
     # ✅ Leverage Hyperopt Parameters
     leverage_range_start = 1
     leverage_range_end = IntParameter(1, 10, default=3, space="buy", load=True, optimize=use_leverage)
-    volatility_influence = RealParameter(0.0, 0.5, default=0.2, space="buy", load=True, optimize=use_leverage)
-    confidence_influence = RealParameter(0.0, 0.5, default=0.2, space="buy", load=True, optimize=use_leverage)    
+    volatility_influence = RealParameter(0.0, 1.0, default=0.2, space="buy", load=True, optimize=use_leverage)
+    confidence_influence = RealParameter(0.0, 1.0, default=0.2, space="buy", load=True, optimize=use_leverage)    
 
     # # Buy hyperspace params:
     # buy_params = {
-    #     "confidence_influence": 0.48319,
-    #     "confidence_threshold_multiplier": 0.195,
-    #     "dynamic_long_threshold_multiplier": 1.14174,
-    #     "dynamic_short_threshold_multiplier": 0.57992,
-    #     "high_confidence_threshold": 0.8922,
-    #     "rolling_trend_threshold_multiplier": 1.9719,
-    #     "stake_scaling_factor": 1.99029,
-    #     "use_confidence_filter_entry": False,
-    #     "use_trend_filter": True,
-    #     "vol_rank_threshold": 0.13213,
-    #     "volatility_influence": 0.04417,
+    #     "confidence_threshold_multiplier": 0.98579,
+    #     "dynamic_long_threshold_multiplier": 0.54824,
+    #     "dynamic_short_threshold_multiplier": 0.62449,
+    #     "high_confidence_threshold": 0.92783,
+    #     "rolling_trend_threshold_multiplier": 1.33262,
+    #     "stake_scaling_factor": 0.8066,
+    #     "trend_window": 42,
+    #     "vol_rank_threshold": 0.05762,
+    #     "vol_window": 46,
+    #     "confidence_influence": 0.2,  # value loaded from strategy
+    #     "leverage_range_end": 3,  # value loaded from strategy
+    #     "use_confidence_filter_entry": True,  # value loaded from strategy
+    #     "use_trend_filter": True,  # value loaded from strategy
+    #     "volatility_influence": 0.2,  # value loaded from strategy
     # }
 
     # # Sell hyperspace params:
     # sell_params = {
-    #     "atr_stoploss_multiplier": 4.78351,
-    #     "dynamic_long_exit_threshold_multiplier": 0.73628,
-    #     "dynamic_short_exit_threshold_multiplier": 1.47669,
-    #     "historical_volatility_factor": 0.60757,
-    #     "initial_stop_duration_candles": 1,
-    #     "max_loss_ceiling": 0.11955,
-    #     "max_loss_floor": 0.02316,
-    #     "max_loss_vol_multiplier": 3.94385,
-    #     "min_profit_for_trailing": 0.04275,
-    #     "prediction_confidence_factor": 0.55528,
-    #     "soft_stoploss_pct": -0.1028,
-    #     "timed_exit_long_threshold": 30,
-    #     "timed_exit_short_threshold": 12,
-    #     "use_target_exit_filter": False,
-    #     "use_timed_exit": False,
-    #     "use_trend_exit_filter": False,
+    #     "atr_stoploss_multiplier": 3.59062,
+    #     "dynamic_long_exit_threshold_multiplier": 1.26978,
+    #     "dynamic_short_exit_threshold_multiplier": 0.51048,
+    #     "historical_volatility_factor": 0.36286,
+    #     "initial_stop_duration_candles": 2,
+    #     "max_loss_ceiling": 0.18843,
+    #     "max_loss_floor": 0.01119,
+    #     "max_loss_vol_multiplier": 2.01105,
+    #     "min_profit_for_trailing": 0.01377,
+    #     "prediction_confidence_factor": 0.22998,
+    #     "soft_stoploss_pct": -0.24833,
+    #     "timed_exit_long_threshold": 43,
+    #     "timed_exit_short_threshold": 18,
+    #     "trend_exit_threshold_multiplier": 1.72898,
+    #     "use_target_exit_filter": True,  # value loaded from strategy
+    #     "use_timed_exit": True,  # value loaded from strategy
+    #     "use_trend_exit_filter": True,  # value loaded from strategy
     # }
 
     def __init__(self, config: Dict, *args, **kwargs) -> None:
@@ -385,7 +391,7 @@ class LSTMStrategy_v34(IStrategy):
         # ✅ 1. ATR (Volatility)
         # - Timeperiod: Dynamically calculated based on recent volatility.
         # - Scaling: Normalized by close price.
-        volatility_window = 50  # Window to assess recent volatility
+        volatility_window = self.vol_window.value  # Window to assess recent volatility
         atr_timeperiod = int(10 + 20 * (df["close"].pct_change().rolling(volatility_window).std().iloc[-1] / 0.05))  # Dynamic timeperiod
         atr_timeperiod = max(5, min(atr_timeperiod, 30))  # Clip to reasonable range
         df["atr"] = ta.ATR(df, timeperiod=atr_timeperiod).bfill()
@@ -421,7 +427,7 @@ class LSTMStrategy_v34(IStrategy):
         df["atr_scaled"] = (df["atr_scaled"] - atr_scaled_min) / (atr_scaled_max - atr_scaled_min)
     
         # ✅ 6. Improved Rolling Trend Scaling: Adaptive Window + Normalization
-        trend_window = 24
+        trend_window = self.trend_window.value
         adaptive_window = int(min(trend_window, max(20, df["atr"].rolling(50).mean().iloc[-1] * 10)))
         mean_trend = df["rolling_trend"].rolling(adaptive_window).mean()
         std_trend = df["rolling_trend"].rolling(adaptive_window).std()
@@ -452,6 +458,7 @@ class LSTMStrategy_v34(IStrategy):
         df["long_exit_threshold"] = df['dynamic_exit_threshold_base'] * self.dynamic_long_exit_threshold_multiplier.value * df["atr_scaled"]
         df["short_exit_threshold"] = df['dynamic_exit_threshold_base'] * self.dynamic_short_exit_threshold_multiplier.value * df["atr_scaled"]
         df["rolling_trend_threshold"] = df["rolling_trend_threshold_base"] * self.rolling_trend_threshold_multiplier.value
+        df["rolling_trend_exit_threshold"] = df["exit_trend_threshold_base"] * self.trend_exit_threshold_multiplier.value 
 
         # ✅ Compute & Save Prediction Metrics (Same as Original)
         if hasattr(self, "dp") and hasattr(self.dp, "runmode"):
@@ -553,12 +560,12 @@ class LSTMStrategy_v34(IStrategy):
         # 1. Target Reversal Exit (Primary)
         if self.use_target_exit_filter.value:
             df.loc[
-                (df['&-s_target'] < df["long_exit_threshold"]) &
+                crossed_below(df['&-s_target'], df["long_exit_threshold"]) &
                 combined_exit_condition(df),
                 ['exit_long', 'exit_tag']
             ] = (True, 'exit_long')
             df.loc[
-                (df['&-s_target'] > df["short_exit_threshold"]) &
+                crossed_above(df['&-s_target'], df["short_exit_threshold"]) &
                 combined_exit_condition(df),
                 ['exit_short', 'exit_tag']
             ] = (True, 'exit_short')
@@ -566,12 +573,12 @@ class LSTMStrategy_v34(IStrategy):
         # 2. Trend Reversal Exit (Secondary - if target exit not triggered)
         if self.use_trend_exit_filter.value:
             df.loc[
-                (df['rolling_trend_scaled'] < df["rolling_trend_threshold"]) &
+                crossed_below(df['rolling_trend_scaled'], df["rolling_trend_exit_threshold"]) &
                 (df['exit_long'] == False) & combined_exit_condition(df),  # Only if target exit not triggered
                 ['exit_long', 'exit_tag']
             ] = (True, 'exit_long_trend')
             df.loc[
-                (df['rolling_trend_scaled'] > df["rolling_trend_threshold"]) &
+                crossed_above(df['rolling_trend_scaled'], df["rolling_trend_exit_threshold"]) &
                 (df['exit_short'] == False) & combined_exit_condition(df),  # Only if target exit not triggered
                 ['exit_short', 'exit_tag']
             ] = (True, 'exit_short_trend')
@@ -594,12 +601,20 @@ class LSTMStrategy_v34(IStrategy):
 
     def custom_stoploss(self, pair: str, trade: 'Trade', current_time: datetime, current_rate: float,
                         current_profit: float, **kwargs) -> float:
+        """
+        Custom stoploss logic returning negative percentages relative to current_rate
+        to achieve trailing stop behavior, similar to v32's implicit functionality.
+        Returns:
+            float: Negative value.
+                    -1: Keep current stoploss price.
+                    Negative percentage (e.g., -0.05): Set stop 5% below current_rate (long) or 5% above current_rate (short).
+        """
         dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
         if dataframe is None or dataframe.empty:
             # logger.warning(f"Dataframe unavailable for {pair}. Keeping existing stoploss.")
             return -1 # Keep existing stoploss
 
-        # Ensure trade open rate is valid
+        # Ensure trade open rate is valid (needed for main calculation's percentage conversion)
         if not trade or not trade.open_rate:
                 logger.warning(f"Trade or open_rate unavailable for pair {pair}. Keeping existing stoploss.")
                 return -1 # Keep existing stoploss
@@ -619,7 +634,7 @@ class LSTMStrategy_v34(IStrategy):
         trade_duration_candles = (current_time - trade.open_date_utc).total_seconds() / (tf_minutes * 60)
 
         # Get hyperopt parameters (percentages are expected to be negative for stoploss)
-        soft_stoploss_pct = self.soft_stoploss_pct.value
+        soft_stoploss_pct = self.soft_stoploss_pct.value # Negative value
         initial_duration = self.initial_stop_duration_candles.value
         min_profit_for_trailing = self.min_profit_for_trailing.value # Profit threshold
         atr_multiplier = self.atr_stoploss_multiplier.value
@@ -630,59 +645,53 @@ class LSTMStrategy_v34(IStrategy):
         max_loss_vol_multiplier_val = self.max_loss_vol_multiplier.value
 
         # --- Determine Stoploss Percentage ---
-        stoploss_pct_to_use: float
 
         # --- Initial Stoploss Phase ---
+        # Return soft_stoploss_pct directly. Freqtrade interprets this negative percentage
+        # relative to current_rate, creating a trailing stop.
         if trade_duration_candles < initial_duration:
-            stoploss_pct_to_use = soft_stoploss_pct
-            # logger.info(f"[Stoploss Initial] Pair: {pair} | Duration Candles: {trade_duration_candles:.1f} < {initial_duration} | Using Soft Stop Pct: {stoploss_pct_to_use:.4f}")
+            # logger.info(f"[Stoploss Initial TRAILING] Pair: {pair} | Duration: {trade_duration_candles:.1f} < {initial_duration} | Using Soft Stop Pct: {soft_stoploss_pct:.4f}")
+            return soft_stoploss_pct
 
         # --- Soft Stoploss Phase (After Initial Duration, Before Profit Target) ---
-        elif current_profit < min_profit_for_trailing:
-            stoploss_pct_to_use = soft_stoploss_pct
-            # logger.info(f"[Stoploss Soft] Pair: {pair} | Profit: {current_profit:.4f} < {min_profit_for_trailing:.4f} | Using Soft Stop Pct: {stoploss_pct_to_use:.4f}")
+        # Return soft_stoploss_pct directly. Freqtrade interprets this relative to current_rate.
+        if current_profit < min_profit_for_trailing:
+            # logger.info(f"[Stoploss Soft TRAILING] Pair: {pair} | Profit: {current_profit:.4f} < {min_profit_for_trailing:.4f} | Using Soft Stop Pct: {soft_stoploss_pct:.4f}")
+            return soft_stoploss_pct
 
         # --- Main Stoploss Calculation (After Initial Duration & Profit Target Met) ---
+        # Calculate the desired stoploss percentage based on ATR, volatility, confidence.
+        dynamic_volatility_factor = 1 + historical_volatility * historical_volatility_factor
+        confidence_factor = 1 - (prediction_confidence * prediction_confidence_factor)
+        stoploss_buffer_abs = atr * atr_multiplier * dynamic_volatility_factor * confidence_factor
+
+        # Convert absolute buffer to percentage relative to OPEN rate (for consistent scaling)
+        # We still use open_rate here just to get a comparable percentage scale,
+        # but the final returned percentage will be applied to current_rate by Freqtrade.
+        stoploss_pct_calculated = stoploss_buffer_abs / trade.open_rate # Positive value
+
+        # Calculate max loss percentage (dynamic based on volatility)
+        max_loss_abs_pct = min(max_loss_floor_val + historical_volatility * max_loss_vol_multiplier_val, max_loss_ceiling_val) # Positive value
+
+        # Determine the final percentage: the LARGER loss (closer to zero) between calculated and max_loss cap.
+        # Negate the positive calculated values to get the required negative percentage.
+        final_stoploss_pct = max(-stoploss_pct_calculated, -max_loss_abs_pct) # Result is negative
+
+        # Ensure the calculated percentage is actually negative, fallback to soft stop if error
+        if final_stoploss_pct >= 0:
+            # logger.info(f"[Stoploss Error TRAILING] Pair: {pair} | Calculated positive stoploss {final_stoploss_pct:.4f}. Using soft stoploss {soft_stoploss_pct:.4f} instead.")
+            stoploss_pct_to_use = soft_stoploss_pct
         else:
-            dynamic_volatility_factor = 1 + historical_volatility * historical_volatility_factor
-            confidence_factor = 1 - (prediction_confidence * prediction_confidence_factor) # Lower buffer for high confidence
-            stoploss_buffer_abs = atr * atr_multiplier * dynamic_volatility_factor * confidence_factor
-            stoploss_pct_calculated = stoploss_buffer_abs / trade.open_rate # Positive value
-            # Ensure max loss values are positive for comparison
-            max_loss_abs_pct = min(max_loss_floor_val + historical_volatility * max_loss_vol_multiplier_val, max_loss_ceiling_val) # Positive value
+            stoploss_pct_to_use = final_stoploss_pct
+            # logger.info(
+            #     f"[Stoploss Main TRAILING] Pair: {pair} | DVF: {dynamic_volatility_factor:.4f} | CF: {confidence_factor:.4f} | "
+            #     f"Buffer Abs: {stoploss_buffer_abs:.4f} | Calc SL %: {-stoploss_pct_calculated:.4f} | "
+            #     f"Max Loss %: {-max_loss_abs_pct:.4f} | Final SL Pct: {stoploss_pct_to_use:.4f} | "
+            #     f"Profit: {current_profit:.2f} | Duration Candles: {trade_duration_candles:.1f}"
+            # )
 
-            # final_stoploss_pct is the LARGER loss (closer to zero) between calculated and max_loss
-            # We need the negative percentage, so negate the positive calculated values
-            final_stoploss_pct = max(-stoploss_pct_calculated, -max_loss_abs_pct) # Result is negative
-
-            # Ensure the calculated percentage is actually negative
-            if final_stoploss_pct >= 0:
-                # logger.info(f"[Stoploss Error] Pair: {pair} | Calculated positive stoploss {final_stoploss_pct:.4f}. Using soft stoploss {soft_stoploss_pct:.4f} instead.")
-                stoploss_pct_to_use = soft_stoploss_pct # Fallback to soft stoploss percentage
-            else:
-                stoploss_pct_to_use = final_stoploss_pct
-                # logger.info(
-                #     f"[Stoploss Main] Pair: {pair} | DVF: {dynamic_volatility_factor:.4f} | CF: {confidence_factor:.4f} | "
-                #     f"Buffer Abs: {stoploss_buffer_abs:.4f} | Calc SL %: {-stoploss_pct_calculated:.4f} | "
-                #     f"Max Loss %: {-max_loss_abs_pct:.4f} | Final SL Pct: {stoploss_pct_to_use:.4f} | "
-                #     f"Profit: {current_profit:.2f} | Duration Candles: {trade_duration_candles:.1f}"
-                # )
-
-        # --- Convert Percentage to Absolute Price ---
-        # Calculate the absolute stop price based on the open rate AND trade direction
-        if trade.is_short:
-            # For SHORT trades, stoploss is ABOVE open rate.
-            # Since stoploss_pct_to_use is negative, we subtract it (effectively adding a positive percentage)
-            stop_price = trade.open_rate * (1 - stoploss_pct_to_use)
-            # Alternative clearer way: stop_price = trade.open_rate * (1 + abs(stoploss_pct_to_use))
-        else:
-            # For LONG trades, stoploss is BELOW open rate.
-            stop_price = trade.open_rate * (1 + stoploss_pct_to_use)
-
-        # logger.info(f"[Stoploss Final] Pair: {pair} | Using SL Pct: {stoploss_pct_to_use:.4f} | Open Rate: {trade.open_rate:.4f} | Stop Price: {stop_price:.4f}")
-
-        # Return the absolute stop price
-        return stop_price
+        # Return the final negative percentage. Freqtrade will apply this relative to current_rate.
+        return stoploss_pct_to_use
 
     def custom_stake_amount(self, pair: str, current_time: datetime, current_rate: float, proposed_stake: float,
                             min_stake: float | None, max_stake: float, leverage: float, entry_tag: str | None, side: str, **kwargs) -> float:
@@ -807,10 +816,10 @@ class LSTMStrategy_v34(IStrategy):
         prediction_std = prediction_col + "_std"
 
         if log_metrics:
-            logger.info(f"🔍 {label_col} mean: {dataframe[label_col].mean()}, min: {dataframe[label_col].min()}, max: {dataframe[label_col].max()}")
-            logger.info(f"🔍 {prediction_col} mean: {dataframe[prediction_col].mean()}, min: {dataframe[prediction_col].min()}, max: {dataframe[prediction_col].max()}")
-            logger.info(f"🔍 {prediction_mean} mean: {dataframe[prediction_mean].mean()}, min: {dataframe[prediction_mean].min()}, max: {dataframe[prediction_mean].max()}")
-            logger.info(f"🔍 {prediction_std} mean: {dataframe[prediction_std].mean()}, min: {dataframe[prediction_std].min()}, max: {dataframe[prediction_std].max()}")
+            logger.info(f"🔍 {label_col} | mean: {dataframe[label_col].mean()} , min: {dataframe[label_col].min()}, max: {dataframe[label_col].max()}")
+            logger.info(f"🔍 {prediction_col} | mean: {dataframe[prediction_col].mean()} , min: {dataframe[prediction_col].min()}, max: {dataframe[prediction_col].max()}")
+            logger.info(f"🔍 {prediction_mean} | mean: {dataframe[prediction_mean].mean()} , min: {dataframe[prediction_mean].min()}, max: {dataframe[prediction_mean].max()}")
+            logger.info(f"🔍 {prediction_std} | mean: {dataframe[prediction_std].mean()} , min: {dataframe[prediction_std].min()}, max: {dataframe[prediction_std].max()}")
 
         # Ensure required columns exist
         if prediction_col not in dataframe.columns:
