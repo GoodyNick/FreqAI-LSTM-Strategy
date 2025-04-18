@@ -135,44 +135,84 @@ class LSTMStrategy_v34(IStrategy):
     volatility_influence = RealParameter(0.0, 1.0, default=0.2, space="buy", load=True, optimize=use_leverage)
     confidence_influence = RealParameter(0.0, 1.0, default=0.2, space="buy", load=True, optimize=use_leverage)    
 
-    # Buy hyperspace params:
-    buy_params = {
-        "confidence_threshold_multiplier": 0.80835,
-        "dynamic_long_threshold_multiplier": 0.6275,
-        "dynamic_short_threshold_multiplier": 0.78445,
-        "high_confidence_threshold": 0.7061,
-        "rolling_trend_threshold_multiplier": 0.84231,
-        "stake_scaling_factor": 1.78765,
-        "trend_window": 82,
-        "use_confidence_filter_entry": True,
-        "use_trend_filter": True,
-        "vol_rank_threshold": 0.4012,
-        "vol_window": 86,
-        "confidence_influence": 0.2,  # value loaded from strategy
-        "leverage_range_end": 3,  # value loaded from strategy
-        "volatility_influence": 0.2,  # value loaded from strategy
-    }
+    if use_leverage:
+        # Buy hyperspace params:
+        buy_params = {
+            "confidence_influence": 0.69972,
+            "confidence_threshold_multiplier": 0.92167,
+            "dynamic_long_threshold_multiplier": 0.94825,
+            "dynamic_short_threshold_multiplier": 1.1908,
+            "high_confidence_threshold": 0.77177,
+            "leverage_range_end": 4,
+            "rolling_trend_threshold_multiplier": 1.53269,
+            "stake_scaling_factor": 1.28344,
+            "trend_window": 63,
+            "use_confidence_filter_entry": True,
+            "use_trend_filter": True,
+            "vol_rank_threshold": 0.25956,
+            "vol_window": 65,
+            "volatility_influence": 0.15197,
+        }
 
-    # Sell hyperspace params:
-    sell_params = {
-        "atr_stoploss_multiplier": 6.75092,
-        "dynamic_long_exit_threshold_multiplier": 1.35707,
-        "dynamic_short_exit_threshold_multiplier": 1.22163,
-        "historical_volatility_factor": 0.62198,
-        "initial_stop_duration_candles": 3,
-        "max_loss_ceiling": 0.20639,
-        "max_loss_floor": 0.04378,
-        "max_loss_vol_multiplier": 4.19476,
-        "min_profit_for_trailing": 0.00726,
-        "prediction_confidence_factor": 0.99791,
-        "soft_stoploss_pct": -0.16544,
-        "timed_exit_long_threshold": 59,
-        "timed_exit_short_threshold": 98,
-        "trend_exit_threshold_multiplier": 1.12872,
-        "use_target_exit_filter": True,
-        "use_timed_exit": True,
-        "use_trend_exit_filter": False,
-    }
+        # Sell hyperspace params:
+        sell_params = {
+            "atr_stoploss_multiplier": 1.75911,
+            "dynamic_long_exit_threshold_multiplier": 1.43217,
+            "dynamic_short_exit_threshold_multiplier": 1.22422,
+            "historical_volatility_factor": 0.80103,
+            "initial_stop_duration_candles": 1,
+            "max_loss_ceiling": 0.14319,
+            "max_loss_floor": 0.02042,
+            "max_loss_vol_multiplier": 1.91933,
+            "min_profit_for_trailing": 0.00397,
+            "prediction_confidence_factor": 0.94111,
+            "soft_stoploss_pct": -0.22662,
+            "timed_exit_long_threshold": 45,
+            "timed_exit_short_threshold": 79,
+            "trend_exit_threshold_multiplier": 1.13459,
+            "use_target_exit_filter": True,
+            "use_timed_exit": True,
+            "use_trend_exit_filter": True,
+        }
+    else:
+        # Buy hyperspace params:
+        buy_params = {
+            "confidence_threshold_multiplier": 0.80835,
+            "dynamic_long_threshold_multiplier": 0.6275,
+            "dynamic_short_threshold_multiplier": 0.78445,
+            "high_confidence_threshold": 0.7061,
+            "rolling_trend_threshold_multiplier": 0.84231,
+            "stake_scaling_factor": 1.78765,
+            "trend_window": 82,
+            "use_confidence_filter_entry": True,
+            "use_trend_filter": True,
+            "vol_rank_threshold": 0.4012,
+            "vol_window": 86,
+            "confidence_influence": 0.2,  # value loaded from strategy
+            "leverage_range_end": 3,  # value loaded from strategy
+            "volatility_influence": 0.2,  # value loaded from strategy
+        }
+
+        # Sell hyperspace params:
+        sell_params = {
+            "atr_stoploss_multiplier": 6.75092,
+            "dynamic_long_exit_threshold_multiplier": 1.35707,
+            "dynamic_short_exit_threshold_multiplier": 1.22163,
+            "historical_volatility_factor": 0.62198,
+            "initial_stop_duration_candles": 3,
+            "max_loss_ceiling": 0.20639,
+            "max_loss_floor": 0.04378,
+            "max_loss_vol_multiplier": 4.19476,
+            "min_profit_for_trailing": 0.00726,
+            "prediction_confidence_factor": 0.99791,
+            "soft_stoploss_pct": -0.16544,
+            "timed_exit_long_threshold": 59,
+            "timed_exit_short_threshold": 98,
+            "trend_exit_threshold_multiplier": 1.12872,
+            "use_target_exit_filter": True,
+            "use_timed_exit": True,
+            "use_trend_exit_filter": False,
+        }
 
     def __init__(self, config: Dict, *args, **kwargs) -> None:
         super().__init__(config, *args, **kwargs)
