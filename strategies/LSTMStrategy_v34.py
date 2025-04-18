@@ -92,7 +92,7 @@ class LSTMStrategy_v34(IStrategy):
     hyperopt_categorical = True
 
     # use leverage
-    use_leverage = False
+    use_leverage = True
 
     # ✅ Entry hyperopt parameters
     dynamic_long_threshold_multiplier = RealParameter(0.5, 1.2, default=1.0, space="buy", load=True, optimize=True)
@@ -131,49 +131,48 @@ class LSTMStrategy_v34(IStrategy):
     stake_scaling_factor = RealParameter(0.1, 2.0, default=1.0, space="buy", load=True, optimize=True)
 
     # ✅ Leverage Hyperopt Parameters
-    leverage_range_start = 1
     leverage_range_end = IntParameter(1, 10, default=3, space="buy", load=True, optimize=use_leverage)
     volatility_influence = RealParameter(0.0, 1.0, default=0.2, space="buy", load=True, optimize=use_leverage)
     confidence_influence = RealParameter(0.0, 1.0, default=0.2, space="buy", load=True, optimize=use_leverage)    
 
-    # # Buy hyperspace params:
-    # buy_params = {
-    #     "confidence_threshold_multiplier": 0.98579,
-    #     "dynamic_long_threshold_multiplier": 0.54824,
-    #     "dynamic_short_threshold_multiplier": 0.62449,
-    #     "high_confidence_threshold": 0.92783,
-    #     "rolling_trend_threshold_multiplier": 1.33262,
-    #     "stake_scaling_factor": 0.8066,
-    #     "trend_window": 42,
-    #     "vol_rank_threshold": 0.05762,
-    #     "vol_window": 46,
-    #     "confidence_influence": 0.2,  # value loaded from strategy
-    #     "leverage_range_end": 3,  # value loaded from strategy
-    #     "use_confidence_filter_entry": True,  # value loaded from strategy
-    #     "use_trend_filter": True,  # value loaded from strategy
-    #     "volatility_influence": 0.2,  # value loaded from strategy
-    # }
+    # Buy hyperspace params:
+    buy_params = {
+        "confidence_threshold_multiplier": 0.80835,
+        "dynamic_long_threshold_multiplier": 0.6275,
+        "dynamic_short_threshold_multiplier": 0.78445,
+        "high_confidence_threshold": 0.7061,
+        "rolling_trend_threshold_multiplier": 0.84231,
+        "stake_scaling_factor": 1.78765,
+        "trend_window": 82,
+        "use_confidence_filter_entry": True,
+        "use_trend_filter": True,
+        "vol_rank_threshold": 0.4012,
+        "vol_window": 86,
+        "confidence_influence": 0.2,  # value loaded from strategy
+        "leverage_range_end": 3,  # value loaded from strategy
+        "volatility_influence": 0.2,  # value loaded from strategy
+    }
 
-    # # Sell hyperspace params:
-    # sell_params = {
-    #     "atr_stoploss_multiplier": 3.59062,
-    #     "dynamic_long_exit_threshold_multiplier": 1.26978,
-    #     "dynamic_short_exit_threshold_multiplier": 0.51048,
-    #     "historical_volatility_factor": 0.36286,
-    #     "initial_stop_duration_candles": 2,
-    #     "max_loss_ceiling": 0.18843,
-    #     "max_loss_floor": 0.01119,
-    #     "max_loss_vol_multiplier": 2.01105,
-    #     "min_profit_for_trailing": 0.01377,
-    #     "prediction_confidence_factor": 0.22998,
-    #     "soft_stoploss_pct": -0.24833,
-    #     "timed_exit_long_threshold": 43,
-    #     "timed_exit_short_threshold": 18,
-    #     "trend_exit_threshold_multiplier": 1.72898,
-    #     "use_target_exit_filter": True,  # value loaded from strategy
-    #     "use_timed_exit": True,  # value loaded from strategy
-    #     "use_trend_exit_filter": True,  # value loaded from strategy
-    # }
+    # Sell hyperspace params:
+    sell_params = {
+        "atr_stoploss_multiplier": 6.75092,
+        "dynamic_long_exit_threshold_multiplier": 1.35707,
+        "dynamic_short_exit_threshold_multiplier": 1.22163,
+        "historical_volatility_factor": 0.62198,
+        "initial_stop_duration_candles": 3,
+        "max_loss_ceiling": 0.20639,
+        "max_loss_floor": 0.04378,
+        "max_loss_vol_multiplier": 4.19476,
+        "min_profit_for_trailing": 0.00726,
+        "prediction_confidence_factor": 0.99791,
+        "soft_stoploss_pct": -0.16544,
+        "timed_exit_long_threshold": 59,
+        "timed_exit_short_threshold": 98,
+        "trend_exit_threshold_multiplier": 1.12872,
+        "use_target_exit_filter": True,
+        "use_timed_exit": True,
+        "use_trend_exit_filter": False,
+    }
 
     def __init__(self, config: Dict, *args, **kwargs) -> None:
         super().__init__(config, *args, **kwargs)
@@ -383,165 +382,254 @@ class LSTMStrategy_v34(IStrategy):
         Populates indicators used for trade entry and exit signals.
         Optimized for the 1-hour timeframe.
         Minimizes arbitrary parameters, maximizing dynamic calculations.
+        Adds safeguards against NaN/inf/None. Uses modern pandas fill methods.
         """
-    
+
         self.freqai_info = self.config["freqai"]
-        # logger.info(f"[DEBUG] Entered populate_indicators for {metadata['pair']}")
-    
+
+        # --- Initial Data Cleaning ---
+        # Use .bfill() instead of fillna(method='bfill')
+        df['close'] = pd.to_numeric(df['close'], errors='coerce').replace(0, np.nan).ffill().bfill()
+        df['volume'] = pd.to_numeric(df['volume'], errors='coerce').replace(0, 1e-9).ffill().fillna(1e-9) # Keep fillna(value)
+
+        # --- Standard Indicators ---
         # ✅ 1. ATR (Volatility)
-        # - Timeperiod: Dynamically calculated based on recent volatility.
-        # - Scaling: Normalized by close price.
-        volatility_window = self.vol_window.value  # Window to assess recent volatility
-        atr_timeperiod = int(10 + 20 * (df["close"].pct_change().rolling(volatility_window).std().iloc[-1] / 0.05))  # Dynamic timeperiod
-        atr_timeperiod = max(5, min(atr_timeperiod, 30))  # Clip to reasonable range
-        df["atr"] = ta.ATR(df, timeperiod=atr_timeperiod).bfill()
-        df["atr_normalized"] = df["atr"] / df["close"]  # Normalize by close price
-    
+        volatility_window = self.vol_window.value
+        pct_change_std = df["close"].pct_change().rolling(volatility_window).std().fillna(0)
+        atr_timeperiod = int(10 + 20 * (pct_change_std.iloc[-1] / 0.05))
+        atr_timeperiod = max(5, min(atr_timeperiod, 30))
+        # Use .bfill() instead of fillna(method='bfill')
+        df["atr"] = ta.ATR(df, timeperiod=atr_timeperiod).ffill().bfill().fillna(1e-9) # Keep final fillna(value)
+        df["atr_normalized"] = df["atr"] / df["close"].clip(lower=1e-9)
+        df["atr_normalized"] = df["atr_normalized"].ffill().fillna(0)
+
         # ✅ 2. Volume Rank (Volume)
-        # - Window: Dynamically adjusted based on ATR.
-        atr_mean = df["atr"].rolling(24).mean().iloc[-1]  # Average ATR over 24 periods
-        vol_rank_window = int(12 + 24 * (atr_mean / (df["close"].iloc[-1] * 0.05)))  # Dynamic window
-        vol_rank_window = max(6, min(vol_rank_window, 48))  # Clip to reasonable range
+        # Use .bfill() instead of fillna(method='bfill')
+        atr_mean = df["atr"].rolling(24).mean().bfill().fillna(1e-9) # Keep final fillna(value)
+        vol_rank_window = int(12 + 24 * (atr_mean.iloc[-1] / (df["close"].iloc[-1] * 0.05)))
+        vol_rank_window = max(6, min(vol_rank_window, 48))
         df["vol_rank"] = df["volume"].rolling(vol_rank_window).rank(pct=True).fillna(0)
-    
+
         # ✅ 3. Rolling Trend (Trend)
-        # - Pct Change: Dynamically adjusted based on ATR.
-        # - Rolling Window: Dynamically adjusted based on ATR.
-        atr_scaling_factor = atr_mean / (df["close"].iloc[-1] * 0.05) # ✅ Combine ATR scaling factor
-        pct_change_period = int(12 + 24 * atr_scaling_factor)  # Dynamic period
-        pct_change_period = max(6, min(pct_change_period, 48))  # Clip to reasonable range
-        rolling_window = int(3 + 6 * atr_scaling_factor)  # Dynamic window
-        rolling_window = max(2, min(rolling_window, 12))  # Clip to reasonable range
+        atr_scaling_factor = atr_mean.iloc[-1] / (df["close"].iloc[-1] * 0.05)
+        pct_change_period = int(12 + 24 * atr_scaling_factor)
+        pct_change_period = max(6, min(pct_change_period, 48))
+        rolling_window = int(3 + 6 * atr_scaling_factor)
+        rolling_window = max(2, min(rolling_window, 12))
         df["rolling_trend"] = df["close"].pct_change(pct_change_period).rolling(rolling_window).mean().fillna(0)
-    
+
         # ✅ 4. ATR Scaling (Volatility Scaling)
-        # - ATR Window: Dynamically adjusted based on recent volatility.
-        atr_scaling_window = int(24 + 48 * (df["close"].pct_change().rolling(volatility_window).std().iloc[-1] / 0.05))  # Dynamic window
-        atr_scaling_window = max(12, min(atr_scaling_window, 72))  # Clip to reasonable range
-        atr_quantile = 0.90  # Keep quantile as a hyperopt parameter
-        df["atr_scaled"] = df["atr_normalized"] / df["atr_normalized"].rolling(atr_scaling_window).quantile(atr_quantile)
-    
+        atr_scaling_window = int(24 + 48 * (pct_change_std.iloc[-1] / 0.05))
+        atr_scaling_window = max(12, min(atr_scaling_window, 72))
+        atr_quantile = 0.90
+        # Use .bfill() instead of fillna(method='bfill')
+        quantile_val = df["atr_normalized"].rolling(atr_scaling_window).quantile(atr_quantile).ffill().bfill().fillna(1e-9) # Keep final fillna(value)
+        df["atr_scaled"] = df["atr_normalized"] / quantile_val.clip(lower=1e-9)
+        df["atr_scaled"] = df["atr_scaled"].ffill().fillna(0)
+
         # ✅ 5. MinMax Scaling ATR Scaled
         atr_scaled_min = df["atr_scaled"].min()
         atr_scaled_max = df["atr_scaled"].max()
-        df["atr_scaled"] = (df["atr_scaled"] - atr_scaled_min) / (atr_scaled_max - atr_scaled_min)
-    
-        # ✅ 6. Improved Rolling Trend Scaling: Adaptive Window + Normalization
+        atr_scaled_range = atr_scaled_max - atr_scaled_min + 1e-9
+        df["atr_scaled"] = (df["atr_scaled"] - atr_scaled_min) / atr_scaled_range
+        df["atr_scaled"] = df["atr_scaled"].clip(0, 1).fillna(0)
+
+        # ✅ 6. Improved Rolling Trend Scaling
         trend_window = self.trend_window.value
-        adaptive_window = int(min(trend_window, max(20, df["atr"].rolling(50).mean().iloc[-1] * 10)))
-        mean_trend = df["rolling_trend"].rolling(adaptive_window).mean()
-        std_trend = df["rolling_trend"].rolling(adaptive_window).std()
-        df["rolling_trend_scaled"] = (df["rolling_trend"] - mean_trend) / (std_trend + 1e-6)
-    
+        # Use .bfill() instead of fillna(method='bfill')
+        adaptive_window_atr_mean = df["atr"].rolling(50).mean().bfill().fillna(1e-9) # Keep final fillna(value)
+        adaptive_window = int(min(trend_window, max(20, adaptive_window_atr_mean.iloc[-1] * 10)))
+        mean_trend = df["rolling_trend"].rolling(adaptive_window).mean().ffill().fillna(0)
+        std_trend = df["rolling_trend"].rolling(adaptive_window).std().ffill().fillna(1e-9)
+        df["rolling_trend_scaled"] = (df["rolling_trend"] - mean_trend) / std_trend.clip(lower=1e-9)
+        df["rolling_trend_scaled"] = df["rolling_trend_scaled"].fillna(0)
+
         # ✅ Call FreqAI for ML Predictions
         df = self.freqai.start(df, metadata, self)
-        logger.info(f"[DEBUG] FreqAI finished start() call for {metadata['pair']}")
-    
-        # ✅ Store Threshold Base Values (No Hyperopt Parameters Here, Same as Original)
+
+        # --- Process FreqAI Outputs (Except Confidence-Related) ---
+        freqai_cols_pre_metrics = ["&-s_target", "&-s_target_mean", "&-s_target_std", "do_predict"]
+        for col in freqai_cols_pre_metrics:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').ffill().fillna(0)
+            else:
+                logger.warning(f"FreqAI column '{col}' missing after freqai.start(). Assigning 0.")
+                df[col] = 0.0
+
+        # ✅ Store Threshold Base Values (Not Dependent on Confidence)
         df["dynamic_long_threshold_base"] = df["&-s_target_mean"] + df["&-s_target_std"] * df["atr_scaled"]
         df["dynamic_short_threshold_base"] = df["&-s_target_mean"] - df["&-s_target_std"] * df["atr_scaled"]
-        df["rolling_trend_threshold_base"] = df["rolling_trend_scaled"].rolling(100, min_periods=10).median()
+        df["rolling_trend_threshold_base"] = df["rolling_trend_scaled"].rolling(100, min_periods=10).median().ffill().fillna(0)
         df["dynamic_exit_threshold_base"] = (
-            df["&-s_target"].ewm(span=50).mean() +
+            df["&-s_target"].ewm(span=50).mean().ffill().fillna(0) +
             df["atr_scaled"] * df["&-s_target_std"] * (0.6 + df["vol_rank"] * 0.3)
         )
-        df["exit_trend_threshold_base"] = df["rolling_trend_scaled"].rolling(50).median()
-    
-        # ✅ Keeping "T" for Plotting Purposes Only (Not Used in Trade Logic)
+        df["exit_trend_threshold_base"] = df["rolling_trend_scaled"].rolling(50).median().ffill().fillna(0)
+
+        # ✅ Final Threshold Calculations (Not Dependent on Confidence) - Using direct .value access
+        df["long_threshold"] = (df["dynamic_long_threshold_base"] * getattr(self.dynamic_long_threshold_multiplier, 'value', 1.0) * df["atr_scaled"]).fillna(0)
+        df["short_threshold"] = (df["dynamic_short_threshold_base"] * getattr(self.dynamic_short_threshold_multiplier, 'value', 1.0) * df["atr_scaled"]).fillna(0)
+        df["long_exit_threshold"] = (df['dynamic_exit_threshold_base'] * getattr(self.dynamic_long_exit_threshold_multiplier, 'value', 1.0) * df["atr_scaled"]).fillna(0)
+        df["short_exit_threshold"] = (df['dynamic_exit_threshold_base'] * getattr(self.dynamic_short_exit_threshold_multiplier, 'value', 1.0) * df["atr_scaled"]).fillna(0)
+        df["rolling_trend_threshold"] = (df["rolling_trend_threshold_base"] * getattr(self.rolling_trend_threshold_multiplier, 'value', 1.0)).fillna(0)
+        df["rolling_trend_exit_threshold"] = (df["exit_trend_threshold_base"] * getattr(self.trend_exit_threshold_multiplier, 'value', 1.0)).fillna(0)
+
+        # ✅ Keeping "T" for Plotting Purposes Only
         df["T"] = self.create_target_T(df)
         df["Prediction"] = df["&-s_target"]
         df["Avg Prediction"] = df["&-s_target_mean"]
         df["True Label"] = df["T"]
-        # indicators calculated to simply use in trade logic
-        df["long_threshold"] = df["dynamic_long_threshold_base"] * self.dynamic_long_threshold_multiplier.value * df["atr_scaled"]
-        df["short_threshold"] = df["dynamic_short_threshold_base"] * self.dynamic_short_threshold_multiplier.value * df["atr_scaled"]
-        df["long_exit_threshold"] = df['dynamic_exit_threshold_base'] * self.dynamic_long_exit_threshold_multiplier.value * df["atr_scaled"]
-        df["short_exit_threshold"] = df['dynamic_exit_threshold_base'] * self.dynamic_short_exit_threshold_multiplier.value * df["atr_scaled"]
-        df["rolling_trend_threshold"] = df["rolling_trend_threshold_base"] * self.rolling_trend_threshold_multiplier.value
-        df["rolling_trend_exit_threshold"] = df["exit_trend_threshold_base"] * self.trend_exit_threshold_multiplier.value 
 
-        # ✅ Compute & Save Prediction Metrics (Same as Original)
-        if hasattr(self, "dp") and hasattr(self.dp, "runmode"):
-            logger.info(f"📦 runmode: {self.dp.runmode.value}")
-        else:
-            logger.info("📦 runmode: unavailable (likely during training phase)")
-    
-        # only enable prediction metrics logs at training mode
+        # --- Compute Prediction Metrics (This calculates prediction_confidence) ---
         log_metrics = (
             not hasattr(self, "dp")
             or getattr(self.dp, "runmode", None) in [RunMode.BACKTEST, RunMode.HYPEROPT, RunMode.PLOT]
-        )        
-        # ✅ Compute & Save Prediction Metrics (Same as Original)
+        )
         self.compute_prediction_metrics(df, metadata, log_metrics=log_metrics)
-        self.save_prediction_metrics()
-    
-        df["confidence_threshold_base"] = df["prediction_confidence"].rolling(100).quantile(0.5).bfill()
-        df["confidence_threshold"] = df["confidence_threshold_base"] * self.confidence_threshold_multiplier.value
-    
-        # ✅ Calculate trade duration (in candles)
+
+        # --- Process Confidence and Calculate Confidence Thresholds (AFTER compute_prediction_metrics) ---
+        if "prediction_confidence" in df.columns:
+            df["prediction_confidence"] = pd.to_numeric(df["prediction_confidence"], errors='coerce').ffill().fillna(0)
+        else:
+            logger.warning(f"FreqAI column 'prediction_confidence' missing after compute_prediction_metrics. Assigning 0.")
+            df["prediction_confidence"] = 0.0
+
+        # Calculate confidence thresholds using the now available prediction_confidence - Using direct .value access
+        df["confidence_threshold_base"] = df["prediction_confidence"].rolling(100).quantile(0.5).ffill().fillna(0)
+        df["confidence_threshold"] = (df["confidence_threshold_base"] * getattr(self.confidence_threshold_multiplier, 'value', 1.0)).fillna(0)
+
+        # --- Calculate Trade Duration ---
+        if not hasattr(self, 'trades'): self.trades = {}
+        if not hasattr(self, 'timeframe_minutes'): self.timeframe_minutes = timeframe_to_minutes(self.timeframe)
+
         if metadata['pair'] not in self.trades:
             df['trade_duration'] = 0
         else:
-            open_since = self.trades[metadata['pair']]['open_since']
-            df['trade_duration'] = df.index - open_since
-            df['trade_duration'] = df['trade_duration'].apply(lambda x: x.total_seconds() / 60 / self.timeframe_minutes)
-    
-        return df
+            if 'open_since' in self.trades[metadata['pair']]:
+                open_since = self.trades[metadata['pair']]['open_since']
+                if pd.api.types.is_datetime64_any_dtype(df.index):
+                    df['trade_duration'] = (df.index - open_since).total_seconds() / 60 / self.timeframe_minutes
+                else:
+                    logger.warning(f"Dataframe index is not datetime type for {metadata['pair']}. Cannot calculate trade_duration.")
+                    df['trade_duration'] = 0
+            else:
+                logger.warning(f"'open_since' not found in self.trades for {metadata['pair']}. Setting trade_duration to 0.")
+                df['trade_duration'] = 0
 
+        return df
+    
     def populate_entry_trend(self, df: DataFrame, metadata: dict) -> DataFrame:
         """
         Defines the entry signal for both long and short trades using crossed_above/below.
         Leverages indicators calculated in populate_indicators().
+        Handles potential NaN values before crossing checks.
         """
-    
+
         df["enter_long"] = 0
         df["enter_short"] = 0
         df["enter_tag"] = None  # Initialize enter_tag
-    
-        # ✅ Combined Entry Condition (Direction-Aware)
+
+        # --- Fill NaN values and Ensure Numeric Type before comparison ---
+        # List of columns used in comparisons or conditions
+        cols_to_process = [
+            "&-s_target", "long_threshold", "short_threshold",
+            "rolling_trend_scaled", "rolling_trend_threshold", "prediction_confidence",
+            "confidence_threshold", "vol_rank", "atr_scaled",
+            "do_predict" # Though likely int, process just in case
+        ]
+
+        for col in cols_to_process:
+            if col in df.columns:
+                try:
+                    # 1. Forward fill, then fill remaining NaNs with 0
+                    filled_series = df[col].ffill().fillna(0) # Uses ffill() and fillna(value)
+                    # 2. Explicitly convert to float to handle potential None/object types
+                    df[col] = filled_series.astype(float)
+                except Exception as e:
+                    logger.error(f"Error processing column '{col}' for {metadata['pair']}: {e}. Assigning default 0.")
+                    df[col] = 0.0
+            else:
+                logger.warning(f"Column '{col}' not found in dataframe for {metadata['pair']}. Entry/Exit signals might be incorrect. Assigning default 0.")
+                # Assign a default series of 0s if the column is missing entirely
+                df[col] = 0.0
+
+
+        # ✅ Combined Entry Condition (Direction-Aware) - Uses direct column names and hyperparams
         def combined_entry_condition(df, side: str):
-            condition = (df["do_predict"] == 1 & (df["vol_rank"] > self.vol_rank_threshold.value))
-            if self.use_confidence_filter_entry.value:
-                condition &= (df["prediction_confidence"] > df["confidence_threshold"])
-            if self.use_trend_filter.value:
+            # Base condition check
+            base_condition = (df["do_predict"] == 1) # Comparison should be safe after astype(float)
+            vol_rank_thresh_val = getattr(self.vol_rank_threshold, 'value', None)
+            if vol_rank_thresh_val is not None:
+                base_condition &= (df["vol_rank"] > vol_rank_thresh_val)
+            else:
+                logger.warning(f"vol_rank_threshold.value is None for {metadata['pair']}. Skipping vol_rank check.")
+
+            condition = base_condition
+
+            # Ensure confidence_threshold value is available
+            conf_thresh_mult_val = getattr(self.confidence_threshold_multiplier, 'value', None)
+            if self.use_confidence_filter_entry.value and conf_thresh_mult_val is not None:
+                condition &= (df["prediction_confidence"] > df["confidence_threshold"]) # Comparison safe after astype(float)
+            elif self.use_confidence_filter_entry.value:
+                    logger.warning(f"confidence_threshold_multiplier.value is None for {metadata['pair']}. Skipping confidence filter.")
+
+            # Ensure trend_threshold value is available
+            trend_thresh_mult_val = getattr(self.rolling_trend_threshold_multiplier, 'value', None)
+            if self.use_trend_filter.value and trend_thresh_mult_val is not None:
                 if side == "long":
-                    condition &= (df["rolling_trend_scaled"] > df["rolling_trend_threshold"])
+                    condition &= (df["rolling_trend_scaled"] > df["rolling_trend_threshold"]) # Comparison safe after astype(float)
                 elif side == "short":
-                    condition &= (df["rolling_trend_scaled"] < df["rolling_trend_threshold"])
+                    condition &= (df["rolling_trend_scaled"] < df["rolling_trend_threshold"]) # Comparison safe after astype(float)
+            elif self.use_trend_filter.value:
+                    logger.warning(f"rolling_trend_threshold_multiplier.value is None for {metadata['pair']}. Skipping trend filter.")
+
             return condition
-    
-        # ─── Long Entry Logic ───────────────────────────
-        # Apply crossed_above for dynamic_long_threshold
-        df.loc[
-            crossed_above(df["&-s_target"], df["long_threshold"]) &
-            combined_entry_condition(df, "long"),
-            ["enter_long", "enter_tag"]
-        ] = (1, "long")
-    
-        # ─── Short Entry Logic ──────────────────────────
-        # Apply crossed_below for dynamic_short_threshold
-        df.loc[
-            crossed_below(df["&-s_target"], df["short_threshold"]) &
-            combined_entry_condition(df, "short"),
-            ["enter_short", "enter_tag"]
-        ] = (1, "short")
-    
-        # ─── Fallback Entry ─────────────────────────────
-        high_confidence = df["prediction_confidence"] > self.high_confidence_threshold.value
-    
-        # ✅ Make fallback entries more selective
-        df.loc[
-            (df["do_predict"] == 1) & (df["&-s_target"] > 0.01 * df["atr_scaled"]) & high_confidence & (df["enter_long"] == 0) &
-            crossed_above(df["rolling_trend_scaled"], df["rolling_trend_threshold"]),
-            ["enter_long", "enter_tag"]
-        ] = (1, "long_fallback")
-    
-        df.loc[
-            (df["do_predict"] == 1) & (df["&-s_target"] < -0.01 * df["atr_scaled"]) & high_confidence & (df["enter_short"] == 0) & 
-            crossed_below(df["rolling_trend_scaled"], df["rolling_trend_threshold"]),
-            ["enter_short", "enter_tag"]
-        ] = (1, "short_fallback")
-    
+
+        # --- Perform Crossing Checks (Should now be safe) ---
+        try:
+            # ─── Long Entry Logic ───────────────────────────
+            long_cross = crossed_above(df["&-s_target"], df["long_threshold"])
+            df.loc[
+                long_cross & combined_entry_condition(df, "long"),
+                ["enter_long", "enter_tag"]
+            ] = (1, "long")
+
+            # ─── Short Entry Logic ──────────────────────────
+            short_cross = crossed_below(df["&-s_target"], df["short_threshold"])
+            df.loc[
+                short_cross & combined_entry_condition(df, "short"),
+                ["enter_short", "enter_tag"]
+            ] = (1, "short")
+
+            # ─── Fallback Entry ─────────────────────────────
+            # Use getattr for safer access to hyperparameter value
+            high_conf_val = getattr(self.high_confidence_threshold, 'value', None)
+            if high_conf_val is not None:
+                high_confidence = df["prediction_confidence"] > high_conf_val
+
+                fallback_long_cross = crossed_above(df["rolling_trend_scaled"], df["rolling_trend_threshold"])
+                df.loc[
+                    (df["do_predict"] == 1) & (df["&-s_target"] > 0.01 * df["atr_scaled"]) & high_confidence & (df["enter_long"] == 0) &
+                    fallback_long_cross,
+                    ["enter_long", "enter_tag"]
+                ] = (1, "long_fallback")
+
+                fallback_short_cross = crossed_below(df["rolling_trend_scaled"], df["rolling_trend_threshold"])
+                df.loc[
+                    (df["do_predict"] == 1) & (df["&-s_target"] < -0.01 * df["atr_scaled"]) & high_confidence & (df["enter_short"] == 0) &
+                    fallback_short_cross,
+                    ["enter_short", "enter_tag"]
+                ] = (1, "short_fallback")
+            else:
+                    logger.warning(f"high_confidence_threshold.value is None for {metadata['pair']}. Skipping fallback entries.")
+
+
+        except TypeError as e:
+            # Keep critical logging in case the error reappears under different conditions
+            logger.critical(f"CRITICAL: TypeError occurred during crossed_above/below for {metadata['pair']}: {e}")
+            # Log relevant column dtypes directly
+            logger.critical(f"Data types:\nTarget: {df['&-s_target'].dtype}\nLong Thresh: {df['long_threshold'].dtype}\nShort Thresh: {df['short_threshold'].dtype}\nTrend: {df['rolling_trend_scaled'].dtype}\nTrend Thresh: {df['rolling_trend_threshold'].dtype}")
+
         return df
     
     def populate_exit_trend(self, df: DataFrame, metadata: dict) -> DataFrame:
@@ -768,7 +856,7 @@ class LSTMStrategy_v34(IStrategy):
         confidence_factor = prediction_confidence  # Higher confidence -> higher leverage
 
         # ✅ Define the leverage range
-        min_leverage = self.leverage_range_start
+        min_leverage = 1
         strategy_max_leverage = self.leverage_range_end.value
 
         # ✅ Calculate the base leverage (midpoint of the range)
