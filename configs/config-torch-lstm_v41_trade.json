@@ -1,0 +1,191 @@
+{
+  "loglevel": "DEBUG",
+  "logger": {
+      "console": {
+          "enabled": true,
+          "loglevel": "DEBUG"
+      },
+      "file": {
+          "enabled": true,
+          "loglevel": "INFO",
+          "filename": "freqtrade.log"
+      }
+  },
+  "dry_run": true,
+  "timeframe": "5m",
+  "initial_state": "running",
+  "trading_mode": "futures",
+  "margin_mode": "isolated",
+  "max_open_trades": 2,
+  "stake_currency": "USDT",
+  "stake_amount": "unlimited",
+  "tradable_balance_ratio": 1.0,
+  "fiat_display_currency": "USD",
+  "dataformat_ohlcv": "json",
+  "dataformat_trades": "jsongz",
+  "cancel_open_orders_on_exit": false,
+  "dry_run_wallet": 1000,
+  "unfilledtimeout": {
+    "entry": 10,
+    "exit": 30
+  },
+  "entry_pricing": {
+    "price_side": "other",
+    "use_order_book": true,
+    "order_book_top": 1,
+    "price_last_balance": 0.0,
+    "check_depth_of_market": {
+      "enabled": false,
+      "bids_to_ask_delta": 1
+    }
+  },
+  "exit_pricing": {
+    "price_side": "other",
+    "use_order_book": true,
+    "order_book_top": 1
+  },
+  "order_types": {
+    "entry": "market",
+    "exit": "market",
+    "emergency_exit": "market",
+    "force_entry": "market",
+    "force_exit": "market",
+    "stoploss": "market",
+    "stoploss_on_exchange": false,
+    "stoploss_on_exchange_interval": 60
+  },
+  "exchange": {
+    "name": "bybit",
+    "key": "ZlGAAFy0pzvaqFlBY0",
+    "secret": "m5XluMWRrNyhW5DFQuycmcSJN7szGum3f8oe",
+    "ccxt_config": {},
+    "ccxt_async_config": {
+      "enableRateLimit": true,
+      "rateLimit": 50
+    },
+    "pair_whitelist": [
+      "BTC/USDT:USDT",
+      "ETH/USDT:USDT",
+      "LTC/USDT:USDT",
+      "BNB/USDT:USDT",
+      "DOT/USDT:USDT",
+      "SOL/USDT:USDT",
+      "LINK/USDT:USDT",
+      "AVAX/USDT:USDT",
+      "DOGE/USDT:USDT",
+      "TON/USDT:USDT"
+    ],
+    "pair_blacklist": [
+      "TRX/USDT:USDT",
+      "XRP/USDT:USDT",
+      "ADA/USDT:USDT",
+      "XLM/USDT:USDT"
+    ]
+  },
+  "pairlists": [
+    {
+      "method": "StaticPairList"
+    },
+    {
+      "method": "ShuffleFilter",
+      "shuffle_frequency": "candle",
+      "seed": 42
+    }
+  ],
+  "orderflow": {
+      "cache_size": 1000, 
+      "max_candles": 1500, 
+      "scale": 0.5, 
+      "stacked_imbalance_range": 3, 
+      "imbalance_volume": 1, 
+      "imbalance_ratio": 3 
+  },
+  "freqai": {
+      "enabled": true,
+      "identifier": "torch-lstm-5m",
+      "train_period_days": 30,
+      "fit_live_predictions_candles": 200,
+      "force_model_refresh": true,
+      "continual_learning": false,
+      "backtest_period_days": 3,
+      "expiration_hours": 12,
+      "live_retrain_hours": 6,
+      "purge_old_models": 2,
+      "save_backtest_models": true,
+      "write_metrics_to_disk": true,
+      "activate_tensorboard": false,
+      "feature_parameters": {
+          "include_corr_pairlist": [
+              "BTC/USDT:USDT",
+              "ETH/USDT:USDT"
+          ],
+          "include_timeframes": [
+              "5m",
+              "15m",
+              "30m",
+              "1h"
+          ],
+          "label_period_candles": 24,
+          "include_shifted_candidates": 12,
+          "DI_threshold": 10.0,
+          "weight_factor": 0.5,
+          "principal_component_analysis": true,
+          "num_pca_components": 10,
+          "use_SVM_to_remove_outliers": false,
+          "use_DBSCAN_to_remove_outliers": false,      
+          "indicator_periods_candles": [5, 20, 100],
+          "plot_feature_importances": 0,
+          "noise_standard_deviation": 0.01,
+          "buffer_train_data_candles": 20,
+          
+          // ✅ New additions for LSTM
+          "reshape_3d": [24, 10],  // (time_steps, features)
+          "scale_features": "standard",  // Normalization type (standard/scaled)
+          "lag_features": ["close", "volume"],  
+          "lag_amount": 6, 
+          "reverse_train_test_order": true
+      },
+      "data_split_parameters": {
+          "test_size": 0.30,
+          "random_state": 42,
+          "shuffle": false
+      },
+      "model_training_parameters": {
+          "learning_rate": 0.0005,
+          "weight_decay": 0.001,
+          "num_epochs": 50,
+          "use_gpu": true,
+          "enable_feature_importance": false,
+          "enable_early_stopping": true,
+          "early_stopping_patience": 5,
+          "trainer_kwargs": {
+              "batch_size": 64,
+              "n_epochs": 50
+          }
+      },
+      "model_kwargs": {
+          "num_lstm_layers": 3,
+          "hidden_dim": 128,
+          "dropout_percent": 0.2,
+          "window_size": 24,  // ✅ Matches sequence input size for LSTM
+          "input_dim": 15,    // ✅ Defines how many features per timestep
+          "output_dim": 1     // ✅ Single-value regression prediction
+      }
+  },
+  "telegram": {
+    "enabled": true,
+    "token": "7716060533:AAGA3Ftvr3Wv4Qk7MqMDC8cLb_3eikumY10",
+    "chat_id": "51484198"
+  },
+  "api_server": {
+    "enabled": true,
+    "listen_ip_address": "0.0.0.0",
+    "listen_port": 8080,
+    "verbosity": "error",
+    "enable_openapi": false,
+    "jwt_secret_key": "556ebba5770ae3a07e80eda0f0f2b55df102896f8a5b86459c3433c1314345c4",
+    "CORS_origins": [],
+    "username": "freqtrader",
+    "password": "freqpsswwd"
+  }
+}
