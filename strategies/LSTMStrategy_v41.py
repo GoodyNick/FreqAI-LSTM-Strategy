@@ -80,7 +80,7 @@ class LSTMStrategy_v41(IStrategy):
     trailing_stop_positive_offset = 0.0139
     trailing_only_offset_is_reached = True
 
-    timeframe = "1h"
+    timeframe = "5m"
     max_open_trades = 4
     can_short = True
     use_exit_signal = True
@@ -100,6 +100,7 @@ class LSTMStrategy_v41(IStrategy):
     # ✅ Entry hyperopt parameters
     dynamic_long_threshold_multiplier = RealParameter(0.5, 1.2, default=1.0, space="buy", load=True, optimize=True)
     dynamic_short_threshold_multiplier = RealParameter(0.5, 1.2, default=1.0, space="buy", load=True, optimize=True)
+    use_crossed_entry = CategoricalParameter([True, False], default=False, space="buy", load=True, optimize=hyperopt_categorical)
     use_vol_filter = CategoricalParameter([True, False], default=False, space="buy", load=True, optimize=hyperopt_categorical)
     vol_rank_threshold = RealParameter(0.05, 0.5, default=0.25, space="buy", load=True, optimize=True)
     high_confidence_threshold = RealParameter(0.7, 0.95, default=0.85, space="buy", load=True, optimize=True)
@@ -365,8 +366,6 @@ class LSTMStrategy_v41(IStrategy):
         dataframe['fear_greed_index'] = fear_greed_value
         dataframe['fear_greed_index'] = dataframe['fear_greed_index'].ffill()
 
-        logger.info(f"🔍 Total features before model training: {len(dataframe.columns)}")
-
         return dataframe
 
     def set_freqai_targets(self, dataframe: DataFrame, metadata: Dict, **kwargs) -> DataFrame:
@@ -631,14 +630,20 @@ class LSTMStrategy_v41(IStrategy):
         # --- Perform Crossing Checks (Should now be safe) ---
         try:
             # ─── Long Entry Logic ───────────────────────────
-            long_cross = crossed_above(df["&-s_target"], df["long_threshold"])
+            if self.use_crossed_entry.value:
+                long_cross = crossed_above(df["&-s_target"], df["long_threshold"])
+            else:
+                long_cross = df["&-s_target"] > df["long_threshold"]
             df.loc[
                 long_cross & combined_entry_condition(df, "long"),
                 ["enter_long", "enter_tag"]
             ] = (1, "long")
 
             # ─── Short Entry Logic ──────────────────────────
-            short_cross = crossed_below(df["&-s_target"], df["short_threshold"])
+            if self.use_crossed_entry.value:
+                short_cross = crossed_below(df["&-s_target"], df["short_threshold"])
+            else:
+                short_cross = df["&-s_target"] < df["short_threshold"]
             df.loc[
                 short_cross & combined_entry_condition(df, "short"),
                 ["enter_short", "enter_tag"]

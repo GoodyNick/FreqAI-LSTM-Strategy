@@ -46,16 +46,18 @@ class LSTMStrategy_v34(IStrategy):
             "predictions": {
                 "True Label": {"color": "blue", "plot_type": "line"},  # Rename T to "True Label"
                 "Prediction": {"color": "red", "plot_type": "line"},  # Rename "&-s_target" to "Prediction"
-                "Avg Prediction": {"color": "green", "plot_type": "line"},  # Rename "&-s_target_mean" to "Avg Prediction"
+                "Avg Prediction": {"color": "white", "plot_type": "line"},  # Rename "&-s_target_mean" to "Avg Prediction"
                 "long_threshold": {"color": "green", "plot_type": "line"},
                 "short_threshold": {"color": "red", "plot_type": "line"},
             },
             "Confidence": {
                 "prediction_confidence": {"color": "orange", "plot_type": "scatter"},  # Plot prediction confidence
                 "confidence_threshold" : {"color": "brown", "plot_type": "scatter"},
+                "do_predict": {"color": "purple", "plot_type": "scatter"},  # Plot do_predict
             },
             "Indicators": {
                 "atr_scaled": {"color": "green", "plot_type": "line"},
+                "vol_rank": {"color": "blue", "plot_type": "line"},
             },
             "Thresholds": {
                 "rolling_trend_scaled": {"color": "blue", "plot_type": "line"},
@@ -79,6 +81,7 @@ class LSTMStrategy_v34(IStrategy):
     trailing_only_offset_is_reached = True
 
     timeframe = "1h"
+    max_open_trades = 4
     can_short = True
     use_exit_signal = True
     process_only_new_candles = True
@@ -97,6 +100,8 @@ class LSTMStrategy_v34(IStrategy):
     # ✅ Entry hyperopt parameters
     dynamic_long_threshold_multiplier = RealParameter(0.5, 1.2, default=1.0, space="buy", load=True, optimize=True)
     dynamic_short_threshold_multiplier = RealParameter(0.5, 1.2, default=1.0, space="buy", load=True, optimize=True)
+    use_crossed_entry = CategoricalParameter([True, False], default=False, space="buy", load=True, optimize=hyperopt_categorical)
+    use_vol_filter = CategoricalParameter([True, False], default=False, space="buy", load=True, optimize=hyperopt_categorical)
     vol_rank_threshold = RealParameter(0.05, 0.5, default=0.25, space="buy", load=True, optimize=True)
     high_confidence_threshold = RealParameter(0.7, 0.95, default=0.85, space="buy", load=True, optimize=True)
     use_confidence_filter_entry = CategoricalParameter([True, False], default=True, space="buy", load=True, optimize=hyperopt_categorical)
@@ -136,7 +141,7 @@ class LSTMStrategy_v34(IStrategy):
     confidence_influence = RealParameter(0.0, 1.0, default=0.2, space="buy", load=True, optimize=use_leverage)    
 
     if use_leverage:
-        # Buy hyperspace params:
+        # Buy hyperspace params(1 year, max trades 2):
         buy_params = {
             "confidence_influence": 0.69972,
             "confidence_threshold_multiplier": 0.92167,
@@ -174,20 +179,24 @@ class LSTMStrategy_v34(IStrategy):
             "use_timed_exit": True,
             "use_trend_exit_filter": True,
         }
+        
     else:
+        
         # Buy hyperspace params:
         buy_params = {
-            "confidence_threshold_multiplier": 0.96214,
-            "dynamic_long_threshold_multiplier": 0.78657,
-            "dynamic_short_threshold_multiplier": 0.74133,
-            "high_confidence_threshold": 0.78351,
-            "rolling_trend_threshold_multiplier": 0.62609,
-            "stake_scaling_factor": 1.765,
-            "trend_window": 90,
-            "use_confidence_filter_entry": True,
+            "confidence_threshold_multiplier": 0.26493,
+            "dynamic_long_threshold_multiplier": 0.63941,
+            "dynamic_short_threshold_multiplier": 1.1045,
+            "high_confidence_threshold": 0.71374,
+            "rolling_trend_threshold_multiplier": 1.1216,
+            "stake_scaling_factor": 0.81146,
+            "trend_window": 84,
+            "use_confidence_filter_entry": False,
+            "use_crossed_entry": False,
             "use_trend_filter": False,
-            "vol_rank_threshold": 0.15384,
-            "vol_window": 76,
+            "use_vol_filter": False,
+            "vol_rank_threshold": 0.09533,
+            "vol_window": 19,
             "confidence_influence": 0.2,  # value loaded from strategy
             "leverage_range_end": 3,  # value loaded from strategy
             "volatility_influence": 0.2,  # value loaded from strategy
@@ -195,23 +204,23 @@ class LSTMStrategy_v34(IStrategy):
 
         # Sell hyperspace params:
         sell_params = {
-            "atr_stoploss_multiplier": 1.08672,
-            "dynamic_long_exit_threshold_multiplier": 1.34974,
-            "dynamic_short_exit_threshold_multiplier": 1.2927,
-            "historical_volatility_factor": 0.84423,
+            "atr_stoploss_multiplier": 9.35765,
+            "dynamic_long_exit_threshold_multiplier": 0.81634,
+            "dynamic_short_exit_threshold_multiplier": 1.40679,
+            "historical_volatility_factor": 0.47501,
             "initial_stop_duration_candles": 1,
-            "max_loss_ceiling": 0.17438,
-            "max_loss_floor": 0.03156,
-            "max_loss_vol_multiplier": 0.65719,
-            "min_profit_for_trailing": 0.0028,
-            "prediction_confidence_factor": 0.96542,
-            "soft_stoploss_pct": -0.24775,
-            "timed_exit_long_threshold": 72,
-            "timed_exit_short_threshold": 71,
-            "trend_exit_threshold_multiplier": 1.58606,
-            "use_target_exit_filter": True,
+            "max_loss_ceiling": 0.10129,
+            "max_loss_floor": 0.01123,
+            "max_loss_vol_multiplier": 3.09849,
+            "min_profit_for_trailing": 0.00173,
+            "prediction_confidence_factor": 0.99398,
+            "soft_stoploss_pct": -0.05871,
+            "timed_exit_long_threshold": 43,
+            "timed_exit_short_threshold": 16,
+            "trend_exit_threshold_multiplier": 1.12377,
+            "use_target_exit_filter": False,
             "use_timed_exit": False,
-            "use_trend_exit_filter": True,
+            "use_trend_exit_filter": False,
         }
 
     def __init__(self, config: Dict, *args, **kwargs) -> None:
@@ -359,8 +368,6 @@ class LSTMStrategy_v34(IStrategy):
         fear_greed_value, fear_greed_classification = self.get_fear_and_greed_index(current_date)
         dataframe['fear_greed_index'] = fear_greed_value
         dataframe['fear_greed_index'] = dataframe['fear_greed_index'].ffill()
-
-        logger.info(f"🔍 Total features before model training: {len(dataframe.columns)}")
 
         return dataframe
 
@@ -599,17 +606,15 @@ class LSTMStrategy_v34(IStrategy):
             # Base condition check
             base_condition = (df["do_predict"] == 1) # Comparison should be safe after astype(float)
             vol_rank_thresh_val = getattr(self.vol_rank_threshold, 'value', None)
-            if vol_rank_thresh_val is not None:
+            if self.use_vol_filter.value and vol_rank_thresh_val is not None:
                 base_condition &= (df["vol_rank"] > vol_rank_thresh_val)
-            else:
-                logger.warning(f"vol_rank_threshold.value is None for {metadata['pair']}. Skipping vol_rank check.")
-
-            condition = base_condition
+            # else:
+                # logger.warning(f"vol_rank_threshold.value is None for {metadata['pair']}. Skipping vol_rank check.")
 
             # Ensure confidence_threshold value is available
             conf_thresh_mult_val = getattr(self.confidence_threshold_multiplier, 'value', None)
             if self.use_confidence_filter_entry.value and conf_thresh_mult_val is not None:
-                condition &= (df["prediction_confidence"] > df["confidence_threshold"]) # Comparison safe after astype(float)
+                base_condition &= (df["prediction_confidence"] > df["confidence_threshold"]) # Comparison safe after astype(float)
             elif self.use_confidence_filter_entry.value:
                     logger.warning(f"confidence_threshold_multiplier.value is None for {metadata['pair']}. Skipping confidence filter.")
 
@@ -617,25 +622,31 @@ class LSTMStrategy_v34(IStrategy):
             trend_thresh_mult_val = getattr(self.rolling_trend_threshold_multiplier, 'value', None)
             if self.use_trend_filter.value and trend_thresh_mult_val is not None:
                 if side == "long":
-                    condition &= (df["rolling_trend_scaled"] > df["rolling_trend_threshold"]) # Comparison safe after astype(float)
+                    base_condition &= (df["rolling_trend_scaled"] > df["rolling_trend_threshold"]) # Comparison safe after astype(float)
                 elif side == "short":
-                    condition &= (df["rolling_trend_scaled"] < df["rolling_trend_threshold"]) # Comparison safe after astype(float)
+                    base_condition &= (df["rolling_trend_scaled"] < df["rolling_trend_threshold"]) # Comparison safe after astype(float)
             elif self.use_trend_filter.value:
                     logger.warning(f"rolling_trend_threshold_multiplier.value is None for {metadata['pair']}. Skipping trend filter.")
 
-            return condition
+            return base_condition
 
         # --- Perform Crossing Checks (Should now be safe) ---
         try:
             # ─── Long Entry Logic ───────────────────────────
-            long_cross = crossed_above(df["&-s_target"], df["long_threshold"])
+            if self.use_crossed_entry.value:
+                long_cross = crossed_above(df["&-s_target"], df["long_threshold"])
+            else:
+                long_cross = df["&-s_target"] > df["long_threshold"]
             df.loc[
                 long_cross & combined_entry_condition(df, "long"),
                 ["enter_long", "enter_tag"]
             ] = (1, "long")
 
             # ─── Short Entry Logic ──────────────────────────
-            short_cross = crossed_below(df["&-s_target"], df["short_threshold"])
+            if self.use_crossed_entry.value:
+                short_cross = crossed_below(df["&-s_target"], df["short_threshold"])
+            else:
+                short_cross = df["&-s_target"] < df["short_threshold"]
             df.loc[
                 short_cross & combined_entry_condition(df, "short"),
                 ["enter_short", "enter_tag"]
