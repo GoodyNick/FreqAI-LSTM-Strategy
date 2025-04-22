@@ -150,9 +150,7 @@ class IFreqaiModel(ABC):
             self.inference_timer("start")
             self.dk = FreqaiDataKitchen(self.config, self.live, metadata["pair"])
             dk = self.start_live(dataframe, metadata, strategy, self.dk)
-            logger.info(f"🔍 Feature count BEFORE removing features: {dk.return_dataframe.shape[1]}")
             dataframe = dk.remove_features_from_df(dk.return_dataframe)
-            logger.info(f"🔍 Feature count AFTER removing features: {dataframe.shape[1]}")
 
 
         # For backtesting, each pair enters and then gets trained for each window along the
@@ -549,7 +547,6 @@ class IFreqaiModel(ABC):
 
         # ✅ PCA Feature Reduction
         if ft_params.get("principal_component_analysis", False):
-            logger.info("✅ Applying PCA to maintain feature consistency.")
             pipe_steps.append(("pca", ds.PCA(n_components=0.999)))
             pipe_steps.append(("post-pca-scaler", SKLearnWrapper(MinMaxScaler(feature_range=(-1, 1)))))
 
