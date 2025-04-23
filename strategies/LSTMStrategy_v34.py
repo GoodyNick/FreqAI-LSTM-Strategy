@@ -45,7 +45,7 @@ class LSTMStrategy_v34(IStrategy):
         "subplots": {
             "predictions": {
                 "True Label": {"color": "blue", "plot_type": "line"},  # Rename T to "True Label"
-                "Prediction": {"color": "red", "plot_type": "line"},  # Rename "&-s_target" to "Prediction"
+                "Prediction": {"color": "yellow", "plot_type": "line"},  # Rename "&-s_target" to "Prediction"
                 "Avg Prediction": {"color": "white", "plot_type": "line"},  # Rename "&-s_target_mean" to "Avg Prediction"
                 "long_threshold": {"color": "green", "plot_type": "line"},
                 "short_threshold": {"color": "red", "plot_type": "line"},
@@ -361,13 +361,13 @@ class LSTMStrategy_v34(IStrategy):
                  dataframe.loc[:, f"{col}-zscore"] = pd.Series(zscore(dataframe[col]), index=dataframe.index).fillna(0)
 
         # ✅ Incorporate order flow features
-        dataframe = self.get_order_flow_features(dataframe, metadata)
+        # dataframe = self.get_order_flow_features(dataframe, metadata)
 
         # ✅ Fetch Fear & Greed Index
-        current_date = dataframe['date'].iloc[-1] if 'date' in dataframe else None
-        fear_greed_value, fear_greed_classification = self.get_fear_and_greed_index(current_date)
-        dataframe['fear_greed_index'] = fear_greed_value
-        dataframe['fear_greed_index'] = dataframe['fear_greed_index'].ffill()
+        # current_date = dataframe['date'].iloc[-1] if 'date' in dataframe else None
+        # fear_greed_value, fear_greed_classification = self.get_fear_and_greed_index(current_date)
+        # dataframe['fear_greed_index'] = fear_greed_value
+        # dataframe['fear_greed_index'] = dataframe['fear_greed_index'].ffill()
 
         return dataframe
 
@@ -681,7 +681,7 @@ class LSTMStrategy_v34(IStrategy):
             # Log relevant column dtypes directly
             logger.critical(f"Data types:\nTarget: {df['&-s_target'].dtype}\nLong Thresh: {df['long_threshold'].dtype}\nShort Thresh: {df['short_threshold'].dtype}\nTrend: {df['rolling_trend_scaled'].dtype}\nTrend Thresh: {df['rolling_trend_threshold'].dtype}")
 
-        return df
+        return df  
     
     def populate_exit_trend(self, df: DataFrame, metadata: dict) -> DataFrame:
         """
