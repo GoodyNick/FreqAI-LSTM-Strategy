@@ -45,15 +45,17 @@ class LSTMStrategy_v43(IStrategy):
         "main_plot": {
         },
         "subplots": {
-            "predictions": {
-                "True Label": {"color": "blue", "plot_type": "line"},  # Rename T to "True Label"
-                "Prediction": {"color": "purple", "plot_type": "line"},  # Rename "&-s_target" to "Prediction"
-                "Avg Prediction": {"color": "brown", "plot_type": "line"},  # Rename "&-s_target_mean" to "Avg Prediction"
-                "long_threshold": {"color": "green", "plot_type": "line"},
-                "short_threshold": {"color": "red", "plot_type": "line"},
+        "predictions": {
+            "True Label": {"color": "blue", "plot_type": "line"},
+            "Prediction": {"color": "purple", "plot_type": "line"},
+            "Avg Prediction": {"color": "brown", "plot_type": "line"}, 
+            "long_threshold": {"color": "green", "plot_type": "line"},
+            "short_threshold": {"color": "red", "plot_type": "line"},
+            "exit_long_threshold": {"color": "lightgreen", "plot_type": "line"}, # Added
+            "exit_short_threshold": {"color": "pink", "plot_type": "line"},      # Added
             },
             "Confidence": {
-                "prediction_confidence": {"color": "orange", "plot_type": "scatter"},  # Plot prediction confidence
+                "pred_confidence": {"color": "orange", "plot_type": "scatter"},  # Plot prediction confidence
                 "confidence_threshold" : {"color": "brown", "plot_type": "scatter"},
                 "do_predict": {"color": "purple", "plot_type": "scatter"},  # Plot do_predict
             },
@@ -75,7 +77,7 @@ class LSTMStrategy_v43(IStrategy):
 
     startup_candle_count = 300
                                                 
-    prediction_metrics_storage = []  # Class-level storage for all pairs
+    pred_metrics_storage = []  # Class-level storage for all pairs
 
     # hyperopt categorical parameters switch
     hyperopt_categorical = True
@@ -98,7 +100,9 @@ class LSTMStrategy_v43(IStrategy):
     trend_window = IntParameter(5, 500, default=48, space="buy", load=True, optimize=True)  # Window for trend calculation
 
     # Exit trend hyperopt parameters
-    use_target_exit_filter = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)    
+    use_target_exit_filter = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)
+    exit_long_threshold_multiplier = DecimalParameter(0.5, 1.5, default=1.0, decimals=2, space="sell", load=True, optimize=True)
+    exit_short_threshold_multiplier = DecimalParameter(0.5, 1.5, default=1.0, decimals=2, space="sell", load=True, optimize=True)        
     use_trend_exit_filter = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)
     use_timed_exit = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)
     timed_exit_long_threshold = IntParameter(10, 300, default=20, space="sell", load=True, optimize=True)
@@ -125,40 +129,40 @@ class LSTMStrategy_v43(IStrategy):
 
     # Buy hyperspace params:
     buy_params = {
-        "confidence_influence": 0.2,
-        "leverage_range_end": 3,
-        "volatility_influence": 0.2,
-        "confidence_threshold_multiplier": 0.25,
-        "dynamic_long_threshold_multiplier": 1.04,
-        "dynamic_short_threshold_multiplier": 0.94,
-        "high_confidence_threshold": 0.73,
-        "rolling_trend_threshold_multiplier": 0.52,
-        "stake_scaling_factor": 2.0,
-        "trend_window": 160,
+        "confidence_threshold_multiplier": 0.97,
+        "dynamic_long_threshold_multiplier": 1.61,
+        "dynamic_short_threshold_multiplier": 0.82,
+        "high_confidence_threshold": 0.88,
+        "rolling_trend_threshold_multiplier": 1.66,
+        "stake_scaling_factor": 1.33,
+        "trend_window": 284,
         "use_confidence_filter_entry": True,
         "use_crossed_entry": False,
         "use_trend_filter": True,
-        "use_vol_filter": False,
-        "vol_rank_threshold": 0.3,
-        "vol_window": 53
+        "use_vol_filter": True,
+        "vol_rank_threshold": 0.81,
+        "vol_window": 326,
+        "confidence_influence": 0.2,  # value loaded from strategy
+        "leverage_range_end": 3,  # value loaded from strategy
+        "volatility_influence": 0.2,  # value loaded from strategy
     }
 
-    # # Sell hyperspace params:
+    # Sell hyperspace params:
     sell_params = {
-        "atr_stoploss_multiplier": 1.01,
-        "historical_volatility_factor": 1.76,
-        "initial_stop_duration_candles": 1,
-        "max_loss_ceiling": 0.11,
-        "max_loss_floor": 0.04,
-        "max_loss_vol_multiplier": 2.64,
-        "min_profit_for_trailing": 0.0,
-        "prediction_confidence_factor": 0.87,
-        "soft_stoploss_pct": -0.21,
-        "timed_exit_long_threshold": 100,
-        "timed_exit_short_threshold": 291,
+        "atr_stoploss_multiplier": 8.52,
+        "historical_volatility_factor": 1.99,
+        "initial_stop_duration_candles": 10,
+        "max_loss_ceiling": 0.08,
+        "max_loss_floor": 0.03,
+        "max_loss_vol_multiplier": 2.85,
+        "min_profit_for_trailing": 0.01,
+        "prediction_confidence_factor": 1.36,
+        "soft_stoploss_pct": -0.06,
+        "timed_exit_long_threshold": 278,
+        "timed_exit_short_threshold": 99,
         "use_target_exit_filter": True,
         "use_timed_exit": True,
-        "use_trend_exit_filter": True
+        "use_trend_exit_filter": True,
     }
 
     # ROI table:  # value loaded from strategy
@@ -332,48 +336,39 @@ class LSTMStrategy_v43(IStrategy):
 
     def create_target_T(self, dataframe: pd.DataFrame) -> pd.Series:
         """
-        Creates a new target (T) based on normalized future price change using ATR.
-        Removed tanh() transformation.
-        Simplified normalization to use ATR only.
+        Creates a new target with smoother dynamic lookahead based on volatility.
         """
-
-        window = 72
+        window = 48
         
-        dataframe["ATR"] = ta.ATR(dataframe, timeperiod=window).bfill()  # ATR-based normalization
-        dataframe["close"] = dataframe["close"].replace(0, np.nan).bfill()  # Prevent division by zero
-
-        # ✅ Compute dynamic lookahead (ensuring valid values)
-        dataframe["lookahead_dynamic"] = np.clip((dataframe["ATR"] / dataframe["close"]) * 100, 5, 24).fillna(10).astype(int)
-
-        # ✅ Compute Future Price Change dynamically using a loop
+        dataframe["ATR"] = ta.ATR(dataframe, timeperiod=window).ffill().bfill().fillna(1e-9)
+        dataframe["close"] = dataframe["close"].replace(0, np.nan).bfill()
+        
+        # Smoother volatility estimation for lookahead
+        vol_estimate = dataframe["ATR"] / dataframe["close"] * 100
+        dataframe["smoothed_vol"] = vol_estimate.rolling(5).mean().fillna(vol_estimate)
+        
+        # Clip to same range but with smoother transitions
+        dataframe["lookahead_dynamic"] = np.clip(dataframe["smoothed_vol"], 5, 24).fillna(10).astype(int)
+        
+        # Rest of your current implementation...
         future_change = []
         for i in range(len(dataframe)):
             try:
                 lookahead = int(dataframe["lookahead_dynamic"].iloc[i])
                 future_index = i + lookahead
                 if future_index >= len(dataframe):
-                    future_change.append(np.nan) # Handle cases where future index is out of bounds
+                    future_change.append(np.nan)
                 else:
                     future_close = dataframe["close"].iloc[future_index]
                     future_change.append(future_close - dataframe["close"].iloc[i])
-            except (KeyError, IndexError) as e:
-                print(f"Error calculating future change: {e}")
-                future_change.append(np.nan)  # Handle cases where row.name is not a valid index
-
+            except (KeyError, IndexError):
+                future_change.append(np.nan)
+    
         dataframe["future_change"] = future_change
-
-        # ✅ Compute Trend Strength Using Future Price Change
         dataframe["TS"] = dataframe["future_change"].rolling(window).mean()
-
-        # ✅ Normalize Trend Strength Using ATR ONLY
-        dataframe["T"] = dataframe["TS"] / (dataframe["ATR"] + 1e-6) # Simplified Normalization
-
-        # ❌ REMOVED: Apply `tanh()` to Limit Extreme Values
-        dataframe["T"] = np.tanh(dataframe["T"])
-
-        # ✅ Fill NaNs (no longer inplace)
+        dataframe["T"] = np.tanh(dataframe["TS"] / (dataframe["ATR"] + 1e-6))
         dataframe["T"] = dataframe["T"].fillna(0)
-
+        
         return dataframe["T"]
     
     def populate_indicators(self, df: DataFrame, metadata: dict) -> DataFrame:
@@ -420,11 +415,11 @@ class LSTMStrategy_v43(IStrategy):
         self.save_prediction_metrics()
         
         # Process confidence (created in compute_prediction_metrics)
-        if "prediction_confidence" in df.columns:
-            df["prediction_confidence"] = pd.to_numeric(df["prediction_confidence"], errors='coerce').ffill().fillna(0)
+        if "pred_confidence" in df.columns:
+            df["pred_confidence"] = pd.to_numeric(df["pred_confidence"], errors='coerce').ffill().fillna(0)
         else:
-            logger.warning("'prediction_confidence' missing after compute_prediction_metrics. Assigning 0.")
-            df["prediction_confidence"] = 0.0
+            logger.warning("'pred_confidence' missing after compute_prediction_metrics. Assigning 0.")
+            df["pred_confidence"] = 0.0
                 
         # Calculate trade duration
         if not hasattr(self, 'trades'): self.trades = {}
@@ -454,7 +449,7 @@ class LSTMStrategy_v43(IStrategy):
         Called from populate_entry_trend and populate_exit_trend.
         """
         # Create a copy to avoid modifying original dataframe
-        result = df.copy()
+        # result = df.copy()
         
         # --- Get hyperopt parameter values WITH TYPE CONVERSION ---
         volatility_window = int(self.vol_window.value)  # Convert to native Python int
@@ -463,48 +458,51 @@ class LSTMStrategy_v43(IStrategy):
         # --- Calculate indicators with hyperopt parameters ---
         
         # 1. ATR (Volatility) with parameter-based timeperiod
-        result["atr"] = ta.ATR(result, timeperiod=volatility_window).ffill().bfill().fillna(1e-9)
-        result["atr_normalized"] = result["atr"] / result["close"].clip(lower=1e-9)
-        
+        df["atr"] = ta.ATR(df, timeperiod=volatility_window).ffill().bfill().fillna(1e-9)
+        df["atr_normalized"] = df["atr"] / df["close"].clip(lower=1e-9)
+
         # 2. Volume Rank with parameter-based window
-        result["vol_rank"] = result["volume"].rolling(volatility_window).rank(pct=True).fillna(0)
-        
+        df["vol_rank"] = df["volume"].rolling(volatility_window).rank(pct=True).fillna(0)
+
         # 3. Rolling Trend with parameter-based periods
         pct_change_period = trend_window
         rolling_window = max(2, int(trend_window // 4))  # Ensure integer division result is converted to Python int
-        result["rolling_trend"] = result["close"].pct_change(pct_change_period).rolling(rolling_window).mean().fillna(0)
-        
+        df["rolling_trend"] = df["close"].pct_change(pct_change_period).rolling(rolling_window).mean().fillna(0)
+
         # 4. ATR Scaling with parameter-based window
         atr_quantile = 0.90
-        quantile_val = result["atr_normalized"].rolling(trend_window).quantile(atr_quantile).ffill().bfill().fillna(1e-9)
-        result["atr_scaled"] = (result["atr_normalized"] / quantile_val.clip(lower=1e-9)).clip(0, 1).fillna(0)
-        
+        quantile_val = df["atr_normalized"].rolling(trend_window).quantile(atr_quantile).ffill().bfill().fillna(1e-9)
+        df["atr_scaled"] = (df["atr_normalized"] / quantile_val.clip(lower=1e-9)).clip(0, 1).fillna(0)
+
         # 5. Rolling Trend Scaling with parameter-based window
-        mean_trend = result["rolling_trend"].rolling(trend_window).mean().ffill().fillna(0)
-        std_trend = result["rolling_trend"].rolling(trend_window).std().ffill().fillna(1e-9)
-        result["rolling_trend_scaled"] = (result["rolling_trend"] - mean_trend) / std_trend.clip(lower=1e-9)
-        result["rolling_trend_scaled"] = result["rolling_trend_scaled"].fillna(0)
-        
+        mean_trend = df["rolling_trend"].rolling(trend_window).mean().ffill().fillna(0)
+        std_trend = df["rolling_trend"].rolling(trend_window).std().ffill().fillna(1e-9)
+        df["rolling_trend_scaled"] = (df["rolling_trend"] - mean_trend) / std_trend.clip(lower=1e-9)
+        df["rolling_trend_scaled"] = df["rolling_trend_scaled"].fillna(0)
+
         # 6. Dynamic Thresholds with parameter-based multipliers
-        result["dynamic_long_threshold_base"] = result["&-s_target_mean"] + result["&-s_target_std"] * result["atr_scaled"]
-        result["dynamic_short_threshold_base"] = result["&-s_target_mean"] - result["&-s_target_std"] * result["atr_scaled"]
-        result["rolling_trend_threshold_base"] = result["rolling_trend_scaled"].rolling(100, min_periods=10).median().ffill().fillna(0)
-        
+        df["dynamic_long_threshold_base"] = df["&-s_target_mean"] + df["&-s_target_std"] * df["atr_scaled"]
+        df["dynamic_short_threshold_base"] = df["&-s_target_mean"] - df["&-s_target_std"] * df["atr_scaled"]
+        df["rolling_trend_threshold_base"] = df["rolling_trend_scaled"].rolling(100, min_periods=10).median().ffill().fillna(0)
+
         # 7. Apply threshold multipliers from hyperopt parameters - convert to float
-        result["long_threshold"] = result["dynamic_long_threshold_base"] * float(self.dynamic_long_threshold_multiplier.value)
-        result["short_threshold"] = result["dynamic_short_threshold_base"] * float(self.dynamic_short_threshold_multiplier.value)
-        result["rolling_trend_threshold"] = result["rolling_trend_threshold_base"] * float(self.rolling_trend_threshold_multiplier.value)
-        
+        df["long_threshold"] = df["dynamic_long_threshold_base"] * float(self.dynamic_long_threshold_multiplier.value)
+        df["exit_long_threshold"] = df["&-s_target_mean"] * float(self.exit_long_threshold_multiplier.value)
+        df["exit_short_threshold"] = df["&-s_target_mean"] * float(self.exit_short_threshold_multiplier.value)            
+        df["short_threshold"] = df["dynamic_short_threshold_base"] * float(self.dynamic_short_threshold_multiplier.value)
+        df["rolling_trend_threshold"] = df["rolling_trend_threshold_base"] * float(self.rolling_trend_threshold_multiplier.value)
+
         # 8. Confidence threshold with parameter-based multiplier - convert to float
-        result["confidence_threshold_base"] = result["prediction_confidence"].rolling(100).quantile(0.5).ffill().fillna(0)
-        result["confidence_threshold"] = result["confidence_threshold_base"] * float(self.confidence_threshold_multiplier.value)
-        
-        return result
-    
+        df["confidence_threshold_base"] = df["pred_confidence"].rolling(100).quantile(0.5).ffill().fillna(0)
+        df["confidence_threshold"] = df["confidence_threshold_base"] * float(self.confidence_threshold_multiplier.value)
+
+        return df
+
     def populate_entry_trend(self, df: DataFrame, metadata: dict) -> DataFrame:
         """
-        Defines the entry signal for both long and short trades.
-        Uses calculate_indicators() to get hyperopt-optimized indicators.
+        Defines the entry signal for both long and short trades using a vectorized approach.
+        Position tracking and overlap prevention are handled by populate_exit_trend,
+        confirm_trade_entry, and Freqtrade's core logic.
         """
         # Initialize entry columns
         df["enter_long"] = 0
@@ -512,11 +510,19 @@ class LSTMStrategy_v43(IStrategy):
         df["enter_tag"] = None
         
         # Get indicators with current hyperopt parameters
-        # This ensures all parameter-dependent indicators are recalculated for each epoch
         processed_df = self.calculate_indicators(df)
         
-        # Define base entry conditions using hyperopt parameters
-        def base_entry_condition(side: str = None):
+        # Calculate base signals (vectorized)
+        if self.use_crossed_entry.value:
+            long_signal_active = crossed_above(processed_df["&-s_target"], processed_df["long_threshold"])
+            short_signal_active = crossed_below(processed_df["&-s_target"], processed_df["short_threshold"])
+        else:
+            long_signal_active = processed_df["&-s_target"] > processed_df["long_threshold"]
+            short_signal_active = processed_df["&-s_target"] < processed_df["short_threshold"]
+        
+        # Define base entry conditions (vectorized)
+        # This function returns a boolean Series
+        def base_entry_condition_series(side: str = None):
             condition = (processed_df["do_predict"] == 1)
             
             # Volume filter
@@ -525,7 +531,7 @@ class LSTMStrategy_v43(IStrategy):
                 
             # Confidence filter
             if self.use_confidence_filter_entry.value:
-                condition &= (processed_df["prediction_confidence"] > processed_df["confidence_threshold"])
+                condition &= (processed_df["pred_confidence"] > processed_df["confidence_threshold"])
                 
             # Trend filter (direction-specific)
             if self.use_trend_filter.value:
@@ -533,131 +539,176 @@ class LSTMStrategy_v43(IStrategy):
                     condition &= (processed_df["rolling_trend_scaled"] > processed_df["rolling_trend_threshold"])
                 elif side == "short":
                     condition &= (processed_df["rolling_trend_scaled"] < processed_df["rolling_trend_threshold"])
-                    
             return condition
         
-        # Long Entry Logic
-        if self.use_crossed_entry.value:
-            long_signal = crossed_above(processed_df["&-s_target"], processed_df["long_threshold"])
-        else:
-            long_signal = processed_df["&-s_target"] > processed_df["long_threshold"]
-            
-        df.loc[
-            long_signal & base_entry_condition(side="long"),
-            ["enter_long", "enter_tag"]
-        ] = (1, "long")
+        # Combine base signals with base entry conditions
+        final_long_entry_condition = long_signal_active & base_entry_condition_series(side="long")
+        final_short_entry_condition = short_signal_active & base_entry_condition_series(side="short")
+
+        # Log conditions for a specific problematic candle (replace with your actual candle's index/date)
+        # For example, if your problematic candle is at index 12345
+        # target_candle_index = 12345 
+        # if df.index[target_candle_index] == df.iloc[final_short_entry_condition.index[final_short_entry_condition]].index: # A bit complex to get specific candle
         
-        # Short Entry Logic
-        if self.use_crossed_entry.value:
-            short_signal = crossed_below(processed_df["&-s_target"], processed_df["short_threshold"])
-        else:
-            short_signal = processed_df["&-s_target"] < processed_df["short_threshold"]
-            
-        df.loc[
-            short_signal & base_entry_condition(side="short"),
-            ["enter_short", "enter_tag"]
-        ] = (1, "short")
+        # Simpler: Log when final_short_entry_condition is true
+        if final_short_entry_condition.any():
+            logger.info(f"DEBUG: Pair: {metadata['pair']}, Candle: {df.loc[final_short_entry_condition].index.values[0] if final_short_entry_condition.any() else 'N/A'}")
+            logger.info(f"DEBUG: short_signal_active: {short_signal_active[final_short_entry_condition].iloc[0] if final_short_entry_condition.any() else 'N/A'}")
+            logger.info(f"DEBUG: base_entry_condition_series(short): {base_entry_condition_series(side='short')[final_short_entry_condition].iloc[0] if final_short_entry_condition.any() else 'N/A'}")
+            logger.info(f"DEBUG: df['enter_long'] on that candle: {df.loc[final_short_entry_condition, 'enter_long'].iloc[0] if final_short_entry_condition.any() else 'N/A'}")
+
+        # Apply standard long entries
+        df.loc[final_long_entry_condition, ["enter_long", "enter_tag"]] = (1, "long")
         
-        # Fallback Entry Logic (high confidence entries)
-        high_confidence = processed_df["prediction_confidence"] > self.high_confidence_threshold.value
+        # Apply standard short entries
+        # Ensure short entries don't overwrite long entries on the same candle if both somehow trigger
+        condition_to_set_short = final_short_entry_condition & (df["enter_long"] == 0)
+        if condition_to_set_short.any():
+            logger.info(f"DEBUG: SETTING enter_short=1 for Pair: {metadata['pair']}, Candle: {df.loc[condition_to_set_short].index.values[0]}")
+        df.loc[condition_to_set_short, ["enter_short", "enter_tag"]] = (1, "short")
         
-        # Fallback long
-        fallback_long = (
+        # Apply standard long entries
+        df.loc[final_long_entry_condition, ["enter_long", "enter_tag"]] = (1, "long")
+        
+        # Apply standard short entries
+        # Ensure short entries don't overwrite long entries on the same candle if both somehow trigger
+        df.loc[final_short_entry_condition & (df["enter_long"] == 0), ["enter_short", "enter_tag"]] = (1, "short")
+
+        # Prepare fallback signal conditions (vectorized)
+        high_confidence = processed_df["pred_confidence"] > self.high_confidence_threshold.value
+        
+        fallback_long_condition_met = (
             (processed_df["do_predict"] == 1) & 
             (processed_df["&-s_target"] > 0.01 * processed_df["atr_scaled"]) & 
-            high_confidence & 
-            (df["enter_long"] == 0) &
+            high_confidence &
             crossed_above(processed_df["rolling_trend_scaled"], processed_df["rolling_trend_threshold"])
         )
-        df.loc[fallback_long, ["enter_long", "enter_tag"]] = (1, "long_fallback")
         
-        # Fallback short
-        fallback_short = (
+        fallback_short_condition_met = (
             (processed_df["do_predict"] == 1) & 
             (processed_df["&-s_target"] < -0.01 * processed_df["atr_scaled"]) & 
-            high_confidence & 
-            (df["enter_short"] == 0) &
+            high_confidence &
             crossed_below(processed_df["rolling_trend_scaled"], processed_df["rolling_trend_threshold"])
         )
-        df.loc[fallback_short, ["enter_short", "enter_tag"]] = (1, "short_fallback")
+
+        # Apply fallback long entries
+        # Only apply if no standard long or short entry was set for this candle
+        df.loc[
+            fallback_long_condition_met &
+            (df["enter_long"] == 0) &
+            (df["enter_short"] == 0), # Ensures no standard short entry took precedence
+            ["enter_long", "enter_tag"]
+        ] = (1, "long_fallback")
+
+        # Apply fallback short entries
+        # Only apply if no standard long or short entry, and no fallback long entry was set for this candle
+        df.loc[
+            fallback_short_condition_met &
+            (df["enter_long"] == 0) & # Ensures no standard long or fallback long took precedence
+            (df["enter_short"] == 0),
+            ["enter_short", "enter_tag"]
+        ] = (1, "short_fallback")
         
         return df
     
     def populate_exit_trend(self, df: DataFrame, metadata: dict) -> DataFrame:
         """
         Defines the exit signal for both long and short trades.
-        Uses calculate_indicators() to get hyperopt-optimized indicators.
+        Uses entry columns directly for opposite signal exits.
         """
         # Initialize exit columns
-        df['exit_long'] = False
-        df['exit_short'] = False
+        df['exit_long'] = False # Initialize to False, will be set to True if any exit condition met
+        df['exit_short'] = False # Initialize to False
         df['exit_tag'] = None
         
         # Get indicators with current hyperopt parameters
-        # This ensures all parameter-dependent indicators are recalculated for each epoch
-        processed_df = self.calculate_indicators(df)
+        processed_df = self.calculate_indicators(df) # Assuming this df is the one from populate_indicators
         
-        # Define base exit condition
+        # Define base exit condition for other exit types
         base_exit_condition = (
-            (processed_df['prediction_confidence'] > processed_df["confidence_threshold"]) & 
-            (processed_df['vol_rank'] > self.vol_rank_threshold.value)
+            (processed_df['pred_confidence'] > processed_df["confidence_threshold"]) & 
+            (processed_df["do_predict"] == 1)
         )
         
-        # 1. Target Reversal Exit (Primary)
+        if self.use_vol_filter.value: # Ensure this hyperopt param is defined if used
+            base_exit_condition &= processed_df['vol_rank'] > self.vol_rank_threshold.value
+        
+        # --- Specific Exit Reasons (These run first) ---
+
+        # 1. Target Reversal Exit 
         if self.use_target_exit_filter.value:
-            # CORRECTED: Use 10% buffer in correct direction for each position type
-            long_exit_threshold = processed_df["long_threshold"] * 0.9  # 10% LOWER for longs
-            short_exit_threshold = processed_df["short_threshold"] * 1.1  # 10% HIGHER for shorts
+            exit_long_threshold = processed_df["&-s_target_mean"] * float(self.exit_long_threshold_multiplier.value)
+            exit_short_threshold = processed_df["&-s_target_mean"] * float(self.exit_short_threshold_multiplier.value)
             
-            # Long exit
+            # Long exit - prediction crosses below exit threshold
             df.loc[
-                crossed_below(processed_df['&-s_target'], long_exit_threshold) &
+                (df['exit_long'] == False) & # Only if not already exited by a prior rule in this function
+                crossed_below(processed_df['&-s_target'], exit_long_threshold) &
                 base_exit_condition,
                 ['exit_long', 'exit_tag']
-            ] = (True, 'exit_long')
+            ] = (True, 'target_exit_long') # More specific tag
             
-            # Short exit
+            # Short exit - prediction crosses above exit threshold
             df.loc[
-                crossed_above(processed_df['&-s_target'], short_exit_threshold) &
+                (df['exit_short'] == False) & # Only if not already exited
+                crossed_above(processed_df['&-s_target'], exit_short_threshold) &
                 base_exit_condition,
                 ['exit_short', 'exit_tag']
-            ] = (True, 'exit_short')
+            ] = (True, 'target_exit_short') # More specific tag
     
         # 2. Trend Reversal Exit (Secondary - if target exit not triggered)
         if self.use_trend_exit_filter.value:
-            # Long exit based on trend
             df.loc[
+                (df['exit_long'] == False) & # Only if not already exited
                 crossed_below(processed_df['rolling_trend_scaled'], processed_df["rolling_trend_threshold"]) &
-                (df['exit_long'] == False) & 
                 base_exit_condition,
                 ['exit_long', 'exit_tag']
-            ] = (True, 'exit_long_trend')
+            ] = (True, 'trend_exit_long') # More specific tag
             
-            # Short exit based on trend
             df.loc[
+                (df['exit_short'] == False) & # Only if not already exited
                 crossed_above(processed_df['rolling_trend_scaled'], processed_df["rolling_trend_threshold"]) &
-                (df['exit_short'] == False) & 
                 base_exit_condition,
                 ['exit_short', 'exit_tag']
-            ] = (True, 'exit_short_trend')
+            ] = (True, 'trend_exit_short') # More specific tag
     
         # 3. Timed Exit (Tertiary - if other exits not triggered)
         if self.use_timed_exit.value:
-            # Long timeout exit
             df.loc[
+                (df['exit_long'] == False) & # Only if not already exited
                 (df['trade_duration'] > self.timed_exit_long_threshold.value) &
-                (df['exit_long'] == False) & 
-                (processed_df['prediction_confidence'] < processed_df['confidence_threshold']),
+                (processed_df['pred_confidence'] < processed_df['confidence_threshold']), # Example condition
                 ['exit_long', 'exit_tag']
-            ] = (True, 'exit_long_timed')
+            ] = (True, 'timed_exit_long') # More specific tag
             
-            # Short timeout exit
             df.loc[
+                (df['exit_short'] == False) & # Only if not already exited
                 (df['trade_duration'] > self.timed_exit_short_threshold.value) &
-                (df['exit_short'] == False) & 
-                (processed_df['prediction_confidence'] < processed_df['confidence_threshold']),
+                (processed_df['pred_confidence'] < processed_df['confidence_threshold']), # Example condition
                 ['exit_short', 'exit_tag']
-            ] = (True, 'exit_short_timed')
+            ] = (True, 'timed_exit_short') # More specific tag
+
+        # --- Opposite Signal Exits (Applied last to ensure they can trigger a flip) ---
+        # These conditions will set exit_long/short to True if an opposite entry was signaled,
+        # potentially overriding a previous exit_tag if another same-direction exit condition was also met.
+        # This is usually desired for ensuring flips.
+        
+        # Exit long positions if a short entry signal is present for the same candle
+        # Note: We use `df['enter_short']` which was populated by `populate_entry_trend`
+        # --- Opposite Signal Exits (Applied last to ensure they can trigger a flip) ---
+        if (df['enter_short'] == 1).any():
+            logger.info(f"DEBUG_EXIT: Pair: {metadata['pair']}, Candle: {df.loc[df['enter_short'] == 1].index.values[0]}, enter_short IS 1. Applying exit_long.")
+            
+        df.loc[
+            df['enter_short'] == 1,  # If populate_entry_trend signaled a short entry
+            ['exit_long', 'exit_tag'] # Then signal an exit for any open long position
+        ] = (True, 'opposite_signal_short')
+        
+        # Exit short positions if a long entry signal is present for the same candle
+        df.loc[
+            df['enter_long'] == 1,   # If populate_entry_trend signaled a long entry
+            ['exit_short', 'exit_tag'] # Then signal an exit for any open short position
+        ] = (True, 'opposite_signal_long')
     
         return df
 
@@ -699,7 +750,7 @@ class LSTMStrategy_v43(IStrategy):
         atr = max(atr, current_rate * 0.005)  # At least 0.5% of price
     
         historical_volatility = dataframe['close'].pct_change().rolling(50).std().iloc[-1] if not dataframe.empty else 0.01
-        prediction_confidence = last_candle.get("prediction_confidence", 0.5)
+        prediction_confidence = last_candle.get("pred_confidence", 0.5)
     
         # --- IMPROVED: Calculate trade duration in candles ---
         tf_minutes = timeframe_to_minutes(self.timeframe)
@@ -804,7 +855,7 @@ class LSTMStrategy_v43(IStrategy):
             return proposed_stake
 
         last_candle = dataframe.iloc[-1]
-        prediction_confidence = last_candle.get("prediction_confidence", 0.5)
+        prediction_confidence = last_candle.get("pred_confidence", 0.5)
         historical_volatility = dataframe['close'].pct_change().rolling(50).std().iloc[-1] if not dataframe.empty else 0.01
 
         # Cap volatility for stability in calculation
@@ -864,7 +915,7 @@ class LSTMStrategy_v43(IStrategy):
 
         last_candle = dataframe.iloc[-1]
         historical_volatility = dataframe['close'].pct_change().rolling(50).std().iloc[-1] if not dataframe.empty else 0.01
-        prediction_confidence = last_candle.get("prediction_confidence", 0.5)
+        prediction_confidence = last_candle.get("pred_confidence", 0.5)
 
         # ✅ Calculate leverage based on volatility and confidence
         volatility_factor = 1 - historical_volatility  # Lower volatility -> higher leverage
@@ -895,20 +946,60 @@ class LSTMStrategy_v43(IStrategy):
         else: 
             return 1.0
     
-    def confirm_trade_entry(self, pair: str, order_type: str, amount: float, rate: float, time_in_force: str, 
-                            current_time, entry_tag, side: str, **kwargs) -> bool:
-        df, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
-        last_candle = df.iloc[-1]
+    def confirm_trade_entry(self, pair: str, order_type: str, amount: float, rate: float,
+                            time_in_force: str, current_time: datetime, entry_tag: str | None,
+                            side: str, **kwargs) -> bool:
+        """
+        Called before placing an order.
+        In live/dry mode, if an opposite position exists, we exit it immediately.
+        In backtesting, this check is bypassed as populate_exit_trend handles opposite exits.
+        """
+        # Access runmode via self.dp (data provider)
+        runmode = getattr(self.dp, 'runmode', None)
 
-        confidence = last_candle.get("prediction_confidence", 0.5)
-        min_trade_size = amount * 0.5
-        max_trade_size = amount * 1.5
+        # Optional: Add this log to see what runmode is being detected
+        # logger.info(f"CONFIRM_TRADE_ENTRY: Pair: {pair}, Side: {side}, Detected Runmode: {runmode}")
 
-        adjusted_size = max(min_trade_size, min(amount * confidence, max_trade_size))
+        if runmode in (RunMode.DRY_RUN, RunMode.LIVE):
+            # Live/Dry-run: Check for open trades and handle opposite positions
+            # This is the block that should only run in live/dry.
+            open_trades = Trade.get_trades([Trade.pair == pair, Trade.is_open.is_(True)])
+            
+            if open_trades:
+                for trade_obj in open_trades: # Renamed to avoid conflict
+                    if (side == "long" and trade_obj.is_short) or \
+                       (side == "short" and not trade_obj.is_short):
+                        # Opposite position exists - force exit first
+                        logger.info(
+                            f"CONFIRM_ENTRY (LIVE/DRY): Forcing exit of {pair} "
+                            f"{'short' if trade_obj.is_short else 'long'} position "
+                            f"before entering {side} position."
+                        )
+                        
+                        if hasattr(self.freqtrade, 'execute_trade_exit'):
+                            self.freqtrade.execute_trade_exit(
+                                trade=trade_obj, 
+                                limit=rate, 
+                                exit_check=True, 
+                                exit_tag=f"confirm_exit_opposite_{side}"
+                            )
+                            logger.info(f"CONFIRM_ENTRY (LIVE/DRY): Opposite trade {trade_obj.id} for {pair} exited.")
+                        else:
+                            logger.warning("CONFIRM_ENTRY (LIVE/DRY): self.freqtrade.execute_trade_exit not available.")
+                        
+                        return True # Allow new entry after attempting exit
+            
+            return True # No opposite trade, or exit handled. Allow entry.
 
-        return super().confirm_trade_entry(pair, order_type, adjusted_size, rate, time_in_force, 
-                                            current_time, entry_tag, side, **kwargs)
-
+        elif runmode == RunMode.BACKTEST:
+            # Backtesting: The logic for exiting opposite trades is handled by
+            # populate_exit_trend. We simply allow the entry signal here.
+            return True
+            
+        else:
+            # Other modes (e.g., HYPEROPT, PLOT) or if runmode is None
+            # Default to allowing the trade.
+            return True
 
     def compute_prediction_metrics(self, dataframe: pd.DataFrame, metadata: dict, label_col: str= "T", prediction_col: str = "&-s_target", log_metrics: bool = True) -> pd.DataFrame:
         """
@@ -948,10 +1039,10 @@ class LSTMStrategy_v43(IStrategy):
 
 
         # ✅ Step 1: Directional Accuracy (Sign Match) - Handles Label NaNs
-        dataframe["prediction_correct"] = np.nan # Initialize with NaN
+        dataframe["pred_correct"] = np.nan # Initialize with NaN
         valid_labels_mask = dataframe[label_col].notna()
         if valid_labels_mask.sum() > 0:
-            dataframe.loc[valid_labels_mask, "prediction_correct"] = np.where(
+            dataframe.loc[valid_labels_mask, "pred_correct"] = np.where(
                 np.sign(dataframe.loc[valid_labels_mask, label_col]) == np.sign(dataframe.loc[valid_labels_mask, prediction_col]),
                 1, 0
             )
@@ -959,7 +1050,7 @@ class LSTMStrategy_v43(IStrategy):
         # ✅ Step 2: Rolling Accuracy (Last 50 candles) - Needed for refined confidence
         # Calculate rolling mean of correctness. Fill initial NaNs with 0.5 (neutral assumption)
         rolling_accuracy_window = 50 # Or use a hyperparameter
-        dataframe["rolling_accuracy"] = dataframe["prediction_correct"].rolling(
+        dataframe["rolling_accuracy"] = dataframe["pred_correct"].rolling(
             rolling_accuracy_window, min_periods=max(1, rolling_accuracy_window // 5)
         ).mean().ffill().fillna(0.5)
 
@@ -973,17 +1064,17 @@ class LSTMStrategy_v43(IStrategy):
             base_confidence = (np.abs(dataframe[prediction_col]) / (dataframe[std_col] + 1e-6)).clip(0, 1)
 
             # 4b. Calculate Refined Prediction Confidence (Modulated by Rolling Accuracy)
-            dataframe["prediction_confidence"] = (base_confidence * dataframe["rolling_accuracy"]).clip(0, 1).fillna(0) # MODIFIED LINE
+            dataframe["pred_confidence"] = (base_confidence * dataframe["rolling_accuracy"]).clip(0, 1).fillna(0) # MODIFIED LINE
 
             # 4c. Confidence score is only counted for correct predictions (Using Refined Confidence)
             # Use np.nan_to_num to handle potential NaNs from prediction_correct
             confidence_correct_array = np.where(
-                dataframe["prediction_correct"] == 1, dataframe["prediction_confidence"], 0
+                dataframe["pred_correct"] == 1, dataframe["pred_confidence"], 0
             )
             dataframe["confidence_correct"] = np.nan_to_num(confidence_correct_array, nan=0.0) # Uses refined confidence
 
             # 4d. Normalize avg confidence over correct predictions - Keep Existing Calculation
-            correct_preds = dataframe["prediction_correct"].rolling(100, min_periods=1).sum()
+            correct_preds = dataframe["pred_correct"].rolling(100, min_periods=1).sum()
             # Ensure confidence_correct exists before rolling on it
             if "confidence_correct" in dataframe.columns:
                  dataframe["avg_confidence_correct"] = dataframe["confidence_correct"].rolling(100, min_periods=1).sum() / (correct_preds + 1e-6)
@@ -993,7 +1084,7 @@ class LSTMStrategy_v43(IStrategy):
 
         else: # Keep Existing Warning
             logger.warning(f"⚠️ Column '{std_col}' not found. Skipping confidence tracking.")
-            dataframe["prediction_confidence"] = 0.0 # Ensure column exists if skipped
+            dataframe["pred_confidence"] = 0.0 # Ensure column exists if skipped
             dataframe["confidence_correct"] = 0.0
             dataframe["avg_confidence_correct"] = np.nan
 
@@ -1020,9 +1111,9 @@ class LSTMStrategy_v43(IStrategy):
             "correlation": correlation
         }
         # Ensure storage exists
-        if not hasattr(self, 'prediction_metrics_storage'):
-            self.prediction_metrics_storage = []
-        self.prediction_metrics_storage.append(metrics)
+        if not hasattr(self, 'pred_metrics_storage'):
+            self.pred_metrics_storage = []
+        self.pred_metrics_storage.append(metrics)
 
         # ✅ Step 7: Log Key Statistics - Keep Existing Calculation
         if log_metrics:
@@ -1046,18 +1137,18 @@ class LSTMStrategy_v43(IStrategy):
         return dataframe
 
     # Keep your save_prediction_metrics function exactly as provided
-    def save_prediction_metrics(self, filename="prediction_metrics.csv"):
+    def save_prediction_metrics(self, filename="pred_metrics.csv"):
         """
         Saves the accumulated prediction metrics to a CSV file after backtesting.
         """
         # Use class attribute directly as it's defined at class level
-        if not LSTMStrategy_v43.prediction_metrics_storage:
+        if not LSTMStrategy_v43.pred_metrics_storage:
             logger.warning("⚠️ No prediction metrics found to save.")
             return
 
         try:
             # Use class attribute directly
-            df = pd.DataFrame(LSTMStrategy_v43.prediction_metrics_storage)
+            df = pd.DataFrame(LSTMStrategy_v43.pred_metrics_storage)
             # Drop duplicates based on pair, keeping the last entry
             df = df.drop_duplicates(subset=['pair'], keep='last')
             output_path = os.path.join(self.config["user_data_dir"], filename)
