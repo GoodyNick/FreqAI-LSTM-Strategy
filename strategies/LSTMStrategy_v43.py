@@ -338,7 +338,7 @@ class LSTMStrategy_v43(IStrategy):
         """
         Creates a new target with smoother dynamic lookahead based on volatility.
         """
-        window = 48
+        window = 72
         
         dataframe["ATR"] = ta.ATR(dataframe, timeperiod=window).ffill().bfill().fillna(1e-9)
         dataframe["close"] = dataframe["close"].replace(0, np.nan).bfill()
@@ -551,11 +551,11 @@ class LSTMStrategy_v43(IStrategy):
         # if df.index[target_candle_index] == df.iloc[final_short_entry_condition.index[final_short_entry_condition]].index: # A bit complex to get specific candle
         
         # Simpler: Log when final_short_entry_condition is true
-        if final_short_entry_condition.any():
-            logger.info(f"DEBUG: Pair: {metadata['pair']}, Candle: {df.loc[final_short_entry_condition].index.values[0] if final_short_entry_condition.any() else 'N/A'}")
-            logger.info(f"DEBUG: short_signal_active: {short_signal_active[final_short_entry_condition].iloc[0] if final_short_entry_condition.any() else 'N/A'}")
-            logger.info(f"DEBUG: base_entry_condition_series(short): {base_entry_condition_series(side='short')[final_short_entry_condition].iloc[0] if final_short_entry_condition.any() else 'N/A'}")
-            logger.info(f"DEBUG: df['enter_long'] on that candle: {df.loc[final_short_entry_condition, 'enter_long'].iloc[0] if final_short_entry_condition.any() else 'N/A'}")
+        # if final_short_entry_condition.any():
+        #     logger.info(f"DEBUG: Pair: {metadata['pair']}, Candle: {df.loc[final_short_entry_condition].index.values[0] if final_short_entry_condition.any() else 'N/A'}")
+        #     logger.info(f"DEBUG: short_signal_active: {short_signal_active[final_short_entry_condition].iloc[0] if final_short_entry_condition.any() else 'N/A'}")
+        #     logger.info(f"DEBUG: base_entry_condition_series(short): {base_entry_condition_series(side='short')[final_short_entry_condition].iloc[0] if final_short_entry_condition.any() else 'N/A'}")
+        #     logger.info(f"DEBUG: df['enter_long'] on that candle: {df.loc[final_short_entry_condition, 'enter_long'].iloc[0] if final_short_entry_condition.any() else 'N/A'}")
 
         # Apply standard long entries
         df.loc[final_long_entry_condition, ["enter_long", "enter_tag"]] = (1, "long")
@@ -696,8 +696,8 @@ class LSTMStrategy_v43(IStrategy):
         # Exit long positions if a short entry signal is present for the same candle
         # Note: We use `df['enter_short']` which was populated by `populate_entry_trend`
         # --- Opposite Signal Exits (Applied last to ensure they can trigger a flip) ---
-        if (df['enter_short'] == 1).any():
-            logger.info(f"DEBUG_EXIT: Pair: {metadata['pair']}, Candle: {df.loc[df['enter_short'] == 1].index.values[0]}, enter_short IS 1. Applying exit_long.")
+        # if (df['enter_short'] == 1).any():
+        #     logger.info(f"DEBUG_EXIT: Pair: {metadata['pair']}, Candle: {df.loc[df['enter_short'] == 1].index.values[0]}, enter_short IS 1. Applying exit_long.")
             
         df.loc[
             df['enter_short'] == 1,  # If populate_entry_trend signaled a short entry
