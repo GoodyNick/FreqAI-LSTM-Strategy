@@ -13,7 +13,8 @@
   },
   "dry_run": false,
   "timeframe": "1h",
-  // "max_open_trades": 1,
+  "add_config_files": [   
+  ],
   "initial_state": "running",
   "trading_mode": "futures",
   "margin_mode": "isolated",
@@ -84,18 +85,14 @@
       "ARB/USDT:USDT",
       "FIL/USDT:USDT",
       "ALGO/USDT:USDT",
-      "ATOM/USDT:USDT"
+      "ATOM/USDT:USDT",
+      "TRX/USDT:USDT",
+      "XRP/USDT:USDT",
+      "ADA/USDT:USDT",
+      "XLM/USDT:USDT"
     ],
     "pair_blacklist": [
-        "AAVE/USDT:USDT",
-        "LTC/USDT:USDT", 
-        "XMR/USDT:USDT",
-        "ETH/USDT:USDT",
-        "SUI/USDT:USDT",
-        "TRX/USDT:USDT",
-        "XRP/USDT:USDT",
-        "ADA/USDT:USDT",
-        "XLM/USDT:USDT"
+
     ]
   },
   "pairlists": [
@@ -120,7 +117,7 @@
       "enabled": true,
       "identifier": "torch-lstm-1h",
       "train_period_days": 180,
-      "fit_live_predictions_candles": 48,
+      "fit_live_predictions_candles": 4,
       "force_model_refresh": false,
       "continual_learning": false,
       "backtest_period_days": 30,
@@ -153,7 +150,7 @@
           "weight_factor": 0.4,
           "principal_component_analysis": true,
           "num_pca_components": 15,
-          "use_SVM_to_remove_outliers": false, 
+          "use_SVM_to_remove_outliers": true, 
           "use_DBSCAN_to_remove_outliers": false,     
           "indicator_periods_candles": [5, 20, 50],
           "plot_feature_importances": 0,
