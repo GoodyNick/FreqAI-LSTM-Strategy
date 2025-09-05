@@ -130,159 +130,89 @@ class LSTMStrategy_v46_1h(IStrategy):
 
     # -------------------- Feature engineering --------------------
     def feature_engineering_expand_all(self, dataframe: pd.DataFrame, period: int, metadata: Dict, **kwargs):
-        """
-        Features available to all FreqAI components.
-        Called multiple times, once for each period in `indicator_periods_candles`.
-        Focus: Robust indicators that benefit from multiple timeperiod evaluations.
-        """
         # RSI
         dataframe[f'%-rsi-{period}'] = ta.RSI(dataframe, timeperiod=period)
-
-        # Smoothed ROC
-        # Raw ROC can be noisy, especially for short periods.
-        # Smoothing it provides a more stable momentum signal.
         roc = ta.ROC(dataframe, timeperiod=period)
         dataframe[f'%-roc_smooth-{period}'] = roc.rolling(window=3, min_periods=1).mean()
-
-        # Bollinger Band Width Percentage
         bollinger = qtpylib.bollinger_bands(qtpylib.typical_price(dataframe), window=period, stds=2)
         dataframe[f'%-bb_width_pct-{period}'] = (
             (bollinger['upper'] - bollinger['lower']) / bollinger['mid'] * 100
         )
-        
-        # Stochastic Oscillator %K (Momentum)
-        # Provides a momentum indicator bounded between 0 and 100.
-        # Use ta.STOCH from talib.abstract
         stoch = ta.STOCH(dataframe, 
                          fastk_period=period, 
                          slowk_period=7, 
-                         slowk_matype=0,
+                         slowk_matype=0, 
                          slowd_period=14, 
                          slowd_matype=0
                         )
-        dataframe[f'%-stoch_k-{period}'] = stoch['slowk'] # slowk is the %K line
-        dataframe[f'%-stoch_d-{period}'] = stoch['slowd'] # slowd is the %D line
-
-        # Rolling Volume Weighted Average Price (VWAP) deviation (if volume is available)
+        dataframe[f'%-stoch_k-{period}'] = stoch['slowk']
+        dataframe[f'%-stoch_d-{period}'] = stoch['slowd']
         if 'volume' in dataframe.columns and 'close' in dataframe.columns and 'high' in dataframe.columns and 'low' in dataframe.columns:
             tpv = (dataframe['high'] + dataframe['low'] + dataframe['close']) / 3 * dataframe['volume']
-            rolling_tpv = tpv.rolling(window=period, min_periods=1).sum()
-            rolling_vol = dataframe['volume'].rolling(window=period, min_periods=1).sum()
-            vwap = rolling_tpv / (rolling_vol + 1e-9)
-            dataframe[f'%-vwap_dev-{period}'] = (dataframe['close'] - vwap) / (vwap + 1e-9) * 100
+            rolling_tpv_sum = tpv.rolling(window=period, min_periods=1).sum()
+            rolling_volume_sum = dataframe['volume'].rolling(window=period, min_periods=1).sum()
+            rolling_vwap = rolling_tpv_sum / (rolling_volume_sum + 1e-9)
+            dataframe[f'%-vwap_dev-{period}'] = (dataframe['close'] - rolling_vwap) / (rolling_vwap + 1e-9) * 100
         else:
             dataframe[f'%-vwap_dev-{period}'] = 0
-
-        # Clean up NaNs at the beginning
         for col in dataframe.columns:
             if col.startswith('%-') and f'-{period}' in col:
-                dataframe[col] = pd.to_numeric(dataframe[col], errors='coerce').bfill().ffill().fillna(0)
-                
+                dataframe[col] = dataframe[col].bfill().ffill().fillna(0)
         return dataframe
 
     def feature_engineering_expand_basic(self, dataframe: DataFrame, metadata: Dict, **kwargs):
-        """
-        Minimal set of features.
-        Focus: Basic price/volume info, slightly smoothed for stability.
-        """
-        # Smoothed Percentage Change (less noisy than raw pct_change)
-        # MODIFIED: Convert ta.EMA output to Series before pct_change
         ema3_series = pd.Series(ta.EMA(dataframe['close'], timeperiod=3), index=dataframe.index)
         dataframe['%-ema3_pct_change'] = ema3_series.pct_change() * 100
-
-        # Smoothed Volume (if available)
         if 'volume' in dataframe.columns:
             dataframe['%-volume_ema3'] = pd.Series(ta.EMA(dataframe['volume'], timeperiod=3), index=dataframe.index)
         else:
             dataframe['%-volume_ema3'] = 0
-
-        # Raw Price (Close) - already present, but explicitly stating its role
         dataframe['%-raw_price'] = dataframe['close']
-        
-        # Basic short-term volatility (ATR over a short window)
-        # MODIFIED: Convert ta.ATR output to Series (good practice)
-        dataframe['%-atr_short'] = pd.Series(ta.ATR(dataframe, timeperiod=5), index=dataframe.index) # Using a small, fixed period
-
-        # Clean up NaNs
+        dataframe['%-atr_short'] = pd.Series(ta.ATR(dataframe, timeperiod=5), index=dataframe.index)
         for col in ['%-ema3_pct_change', '%-volume_ema3', '%-atr_short']:
-            dataframe[col] = pd.to_numeric(dataframe[col], errors='coerce').bfill().ffill().fillna(0)
-
+            if col in dataframe.columns:
+                dataframe[col] = dataframe[col].bfill().ffill().fillna(0)
         return dataframe
 
     def feature_engineering_standard(self, dataframe: pd.DataFrame, metadata: Dict, **kwargs):
-        """
-        Defines features that should remain in their original timeframe.
-        Added ATR Percentage.
-        """
-
-        # Ensure ATR exist first
         if "atr" not in dataframe.columns:
             dataframe["atr"] = ta.ATR(dataframe, timeperiod=14).bfill()
-
-        # ✅ ADDED ATR Percentage
         dataframe["%-atr_pct"] = (dataframe["atr"] / dataframe["close"]) * 100
-
-        # ✅ Keep existing time-based features
         dataframe['date'] = pd.to_datetime(dataframe['date'])
         dataframe.loc[:, "%-day_of_week"] = dataframe["date"].dt.dayofweek
         dataframe.loc[:, "%-hour_of_day"] = dataframe["date"].dt.hour
-
-        # ✅ Rolling Features (Fixed NaNs)
         dataframe.loc[:, "%-rolling_volatility"] = dataframe["close"].rolling(window=24).std().bfill()
         dataframe.loc[:, "%-rolling_mean"] = dataframe["close"].rolling(window=24).mean().bfill()
-
-        # ✅ Replaced Rolling Mean with EMA
         dataframe.loc[:, "%-ema_trend"] = ta.EMA(dataframe, timeperiod=24).bfill()
-
-        # ✅ CUSUM (Trend Break Detector - Should NOT be expanded)
         def get_cusum(series):
             series_mean = series.mean()
             return (series - series_mean).cumsum()
-
         dataframe.loc[:, "%-cusum_close"] = get_cusum(dataframe["close"]).fillna(0)
-
-        # ✅ Optimized Hurst Exponent (Trend Strength - Smoothed)
         def hurst_exponent(ts, max_lag=20):
             if len(ts) < max_lag:
                 return np.nan
             lags = range(2, max_lag)
             tau = [np.std(np.subtract(ts[lag:], ts[:-lag])) for lag in lags]
             return np.polyfit(np.log(lags), np.log(tau), 1)[0]
-
-        dataframe.loc[:, "%-hurst"] = dataframe["close"].rolling(window=72).apply(hurst_exponent, raw=True).fillna(0.5)
+        dataframe.loc[:, "%-hurst"] = dataframe["close"].rolling(window=72).apply(hurst_exponent, raw=True)
         dataframe.loc[:, "%-hurst_smooth"] = dataframe["%-hurst"].rolling(window=10).mean().bfill()
-
-        # ✅ Fourier Transform (Fixed NaNs & Normalized)
         def compute_fourier(series, n_components=3):
             if len(series) < 72:
                 return np.nan
             fft_vals = fft(series)
             return np.abs(fft_vals[:n_components]).sum()
-
         dataframe.loc[:, "%-fourier_price"] = dataframe["close"].rolling(window=72).apply(compute_fourier, raw=True)
         dataframe.loc[:, "%-fourier_price"] = dataframe["%-fourier_price"].fillna(dataframe["%-fourier_price"].median())
-
-        # ✅ Normalize Fourier Features using ATR
         dataframe.loc[:, "%-fourier_price_norm"] = dataframe["%-fourier_price"] / (dataframe["atr"] + 1e-6)
-
-        # ✅ Apply Z-Score Normalization to **volatile features only**
-        # Added %-atr_pct to zscore
         zscore_columns = ["%-rolling_volatility", "%-rolling_mean", "%-fourier_price_norm", "%-atr_pct"]
         for col in zscore_columns:
-             if col in dataframe.columns: # Check if column exists before applying zscore
+             if col in dataframe.columns:
                  dataframe.loc[:, f"{col}-zscore"] = pd.Series(zscore(dataframe[col]), index=dataframe.index).fillna(0)
-
-        # ✅ Incorporate order flow features
-        # dataframe = self.get_order_flow_features(dataframe, metadata)
-
-        # ✅ Fetch Fear & Greed Index
         current_date = dataframe['date'].iloc[-1] if 'date' in dataframe else None
         fear_greed_value, fear_greed_classification = self.get_fear_and_greed_index(current_date)
         dataframe['fear_greed_index'] = fear_greed_value
         dataframe['fear_greed_index'] = dataframe['fear_greed_index'].ffill()
-
         return dataframe
-
     # -------------------- Target & FreqAI connection --------------------
     def create_target_T(self, dataframe: pd.DataFrame) -> pd.Series:
         """
@@ -371,91 +301,6 @@ class LSTMStrategy_v46_1h(IStrategy):
 
     def set_freqai_targets(self, dataframe: DataFrame, metadata: Dict, **kwargs) -> DataFrame:
         dataframe['&-s_target'] = self.create_target_T(dataframe)
-        return dataframe
-
-    def feature_engineering_expand_all(self, dataframe: pd.DataFrame, period: int, metadata: Dict, **kwargs):
-        # RSI
-        dataframe[f'%-rsi-{period}'] = ta.RSI(dataframe, timeperiod=period)
-        roc = ta.ROC(dataframe, timeperiod=period)
-        dataframe[f'%-roc_smooth-{period}'] = roc.rolling(window=3, min_periods=1).mean()
-        bollinger = qtpylib.bollinger_bands(qtpylib.typical_price(dataframe), window=period, stds=2)
-        dataframe[f'%-bb_width_pct-{period}'] = (
-            (bollinger['upper'] - bollinger['lower']) / bollinger['mid'] * 100
-        )
-        stoch = ta.STOCH(dataframe, 
-                         fastk_period=period, 
-                         slowk_period=7, 
-                         slowk_matype=0, 
-                         slowd_period=14, 
-                         slowd_matype=0
-                        )
-        dataframe[f'%-stoch_k-{period}'] = stoch['slowk']
-        dataframe[f'%-stoch_d-{period}'] = stoch['slowd']
-        if 'volume' in dataframe.columns and 'close' in dataframe.columns and 'high' in dataframe.columns and 'low' in dataframe.columns:
-            tpv = (dataframe['high'] + dataframe['low'] + dataframe['close']) / 3 * dataframe['volume']
-            rolling_tpv_sum = tpv.rolling(window=period, min_periods=1).sum()
-            rolling_volume_sum = dataframe['volume'].rolling(window=period, min_periods=1).sum()
-            rolling_vwap = rolling_tpv_sum / (rolling_volume_sum + 1e-9)
-            dataframe[f'%-vwap_dev-{period}'] = (dataframe['close'] - rolling_vwap) / (rolling_vwap + 1e-9) * 100
-        else:
-            dataframe[f'%-vwap_dev-{period}'] = 0
-        for col in dataframe.columns:
-            if col.startswith('%-') and f'-{period}' in col:
-                dataframe[col] = dataframe[col].bfill().ffill().fillna(0)
-        return dataframe
-
-    def feature_engineering_expand_basic(self, dataframe: DataFrame, metadata: Dict, **kwargs):
-        ema3_series = pd.Series(ta.EMA(dataframe['close'], timeperiod=3), index=dataframe.index)
-        dataframe['%-ema3_pct_change'] = ema3_series.pct_change() * 100
-        if 'volume' in dataframe.columns:
-            dataframe['%-volume_ema3'] = pd.Series(ta.EMA(dataframe['volume'], timeperiod=3), index=dataframe.index)
-        else:
-            dataframe['%-volume_ema3'] = 0
-        dataframe['%-raw_price'] = dataframe['close']
-        dataframe['%-atr_short'] = pd.Series(ta.ATR(dataframe, timeperiod=5), index=dataframe.index)
-        for col in ['%-ema3_pct_change', '%-volume_ema3', '%-atr_short']:
-            if col in dataframe.columns:
-                dataframe[col] = dataframe[col].bfill().ffill().fillna(0)
-        return dataframe
-
-    def feature_engineering_standard(self, dataframe: pd.DataFrame, metadata: Dict, **kwargs):
-        if "atr" not in dataframe.columns:
-            dataframe["atr"] = ta.ATR(dataframe, timeperiod=14).bfill()
-        dataframe["%-atr_pct"] = (dataframe["atr"] / dataframe["close"]) * 100
-        dataframe['date'] = pd.to_datetime(dataframe['date'])
-        dataframe.loc[:, "%-day_of_week"] = dataframe["date"].dt.dayofweek
-        dataframe.loc[:, "%-hour_of_day"] = dataframe["date"].dt.hour
-        dataframe.loc[:, "%-rolling_volatility"] = dataframe["close"].rolling(window=24).std().bfill()
-        dataframe.loc[:, "%-rolling_mean"] = dataframe["close"].rolling(window=24).mean().bfill()
-        dataframe.loc[:, "%-ema_trend"] = ta.EMA(dataframe, timeperiod=24).bfill()
-        def get_cusum(series):
-            series_mean = series.mean()
-            return (series - series_mean).cumsum()
-        dataframe.loc[:, "%-cusum_close"] = get_cusum(dataframe["close"]).fillna(0)
-        def hurst_exponent(ts, max_lag=20):
-            if len(ts) < max_lag:
-                return np.nan
-            lags = range(2, max_lag)
-            tau = [np.std(np.subtract(ts[lag:], ts[:-lag])) for lag in lags]
-            return np.polyfit(np.log(lags), np.log(tau), 1)[0]
-        dataframe.loc[:, "%-hurst"] = dataframe["close"].rolling(window=72).apply(hurst_exponent, raw=True)
-        dataframe.loc[:, "%-hurst_smooth"] = dataframe["%-hurst"].rolling(window=10).mean().bfill()
-        def compute_fourier(series, n_components=3):
-            if len(series) < 72:
-                return np.nan
-            fft_vals = fft(series)
-            return np.abs(fft_vals[:n_components]).sum()
-        dataframe.loc[:, "%-fourier_price"] = dataframe["close"].rolling(window=72).apply(compute_fourier, raw=True)
-        dataframe.loc[:, "%-fourier_price"] = dataframe["%-fourier_price"].fillna(dataframe["%-fourier_price"].median())
-        dataframe.loc[:, "%-fourier_price_norm"] = dataframe["%-fourier_price"] / (dataframe["atr"] + 1e-6)
-        zscore_columns = ["%-rolling_volatility", "%-rolling_mean", "%-fourier_price_norm", "%-atr_pct"]
-        for col in zscore_columns:
-             if col in dataframe.columns:
-                 dataframe.loc[:, f"{col}-zscore"] = pd.Series(zscore(dataframe[col]), index=dataframe.index).fillna(0)
-        current_date = dataframe['date'].iloc[-1] if 'date' in dataframe else None
-        fear_greed_value, fear_greed_classification = self.get_fear_and_greed_index(current_date)
-        dataframe['fear_greed_index'] = fear_greed_value
-        dataframe['fear_greed_index'] = dataframe['fear_greed_index'].ffill()
         return dataframe
 
     def populate_indicators(self, df: DataFrame, metadata: dict) -> DataFrame:
@@ -721,33 +566,70 @@ class LSTMStrategy_v46_1h(IStrategy):
             return True
         return True
 
-    # -------------------- Metrics (logging only) --------------------
-    def compute_prediction_metrics(self, dataframe: pd.DataFrame, metadata: dict, label_col: str = "T", prediction_col: str = "&-s_target", log_metrics: bool = True) -> pd.DataFrame:
-        # Do not write columns used in decision logic (keep pred_confidence untouched)
-        pred_mean = prediction_col + "_mean"
-        pred_std = prediction_col + "_std"
-        if prediction_col not in dataframe.columns or label_col not in dataframe.columns:
-            return dataframe
-        for col in [prediction_col, pred_mean, pred_std]:
-            if col in dataframe.columns:
-                dataframe[col] = pd.to_numeric(dataframe[col], errors='coerce').ffill().fillna(0)
-        dataframe[label_col] = pd.to_numeric(dataframe[label_col], errors='coerce')
-
-        dataframe["pred_correct"] = np.nan
-        valid = dataframe[label_col].notna()
-        if valid.sum() > 0:
-            dataframe.loc[valid, "pred_correct"] = np.where(np.sign(dataframe.loc[valid, label_col]) == np.sign(dataframe.loc[valid, prediction_col]), 1, 0)
-        ra_win = 50
-        dataframe["rolling_accuracy"] = dataframe["pred_correct"].rolling(ra_win, min_periods=max(1, ra_win // 5)).mean().ffill().fillna(0.5)
-        dataframe["mae"] = np.abs(dataframe[label_col] - dataframe[prediction_col]).rolling(100, min_periods=1).mean()
-
-        # Prediction confidence for trading decisions (unlike v45, this creates the actual pred_confidence column)
-        if pred_std in dataframe.columns:
-            base_conf = (np.abs(dataframe[prediction_col]) / (dataframe[pred_std] + 1e-6)).clip(0, 1)
-            dataframe["pred_confidence"] = (base_conf * dataframe["rolling_accuracy"]).clip(0, 1).fillna(0)
-        else:
-            dataframe["pred_confidence"] = 0.0
+    # -------------------- Enhanced Metrics System --------------------
+    def compute_prediction_metrics(self, dataframe: pd.DataFrame, metadata: dict, 
+                                 label_col: str = "T", prediction_col: str = "&-s_target", 
+                                 log_metrics: bool = True) -> pd.DataFrame:
+        """Enhanced prediction metrics computation focused on prediction quality"""
+        
+        try:
+            # Try to import and use focused enhanced metrics
+            import sys
+            import os
+            sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+            from simple_enhanced_metrics import compute_prediction_metrics_enhanced
+            return compute_prediction_metrics_enhanced(self, dataframe, metadata, label_col, prediction_col, log_metrics)
             
+        except ImportError as e:
+            logger.warning(f"Simple enhanced metrics not available: {e}")
+        except Exception as e:
+            logger.error(f"Enhanced metrics failed: {e}")
+        
+        # Fallback to basic metrics
+        return self._compute_basic_prediction_metrics(dataframe, metadata, label_col, prediction_col, log_metrics)
+
+    def _add_basic_computed_columns(self, dataframe: pd.DataFrame, label_col: str, prediction_col: str) -> pd.DataFrame:
+        """Add essential computed columns that the strategy needs for trading decisions"""
+        # Ensure pred_correct column exists
+        if "pred_correct" not in dataframe.columns:
+            dataframe["pred_correct"] = np.nan
+            valid = dataframe[label_col].notna() & dataframe[prediction_col].notna()
+            if valid.sum() > 0:
+                dataframe.loc[valid, "pred_correct"] = np.where(
+                    np.sign(dataframe.loc[valid, label_col]) == np.sign(dataframe.loc[valid, prediction_col]), 1, 0
+                )
+        
+        # Ensure rolling_accuracy exists
+        if "rolling_accuracy" not in dataframe.columns:
+            ra_win = 50
+            dataframe["rolling_accuracy"] = dataframe["pred_correct"].rolling(
+                ra_win, min_periods=max(1, ra_win // 5)
+            ).mean().ffill().fillna(0.5)
+        
+        # Ensure MAE exists
+        if "mae" not in dataframe.columns:
+            dataframe["mae"] = np.abs(dataframe[label_col] - dataframe[prediction_col]).rolling(100, min_periods=1).mean()
+        
+        # Ensure pred_confidence exists (critical for trading decisions)
+        if "pred_confidence" not in dataframe.columns:
+            pred_std = prediction_col + "_std"
+            if pred_std in dataframe.columns:
+                base_conf = (np.abs(dataframe[prediction_col]) / (dataframe[pred_std] + 1e-6)).clip(0, 1)
+                dataframe["pred_confidence"] = (base_conf * dataframe["rolling_accuracy"]).clip(0, 1).fillna(0)
+            else:
+                # Fallback confidence calculation
+                pred_abs = np.abs(dataframe[prediction_col])
+                pred_percentile = pred_abs.rolling(100).rank(pct=True)
+                dataframe["pred_confidence"] = (pred_percentile * dataframe["rolling_accuracy"]).fillna(0.5)
+        
+        return dataframe
+
+    def _compute_basic_prediction_metrics(self, dataframe: pd.DataFrame, metadata: dict, 
+                                        label_col: str, prediction_col: str, log_metrics: bool) -> pd.DataFrame:
+        """Fallback to basic prediction metrics if enhanced system fails"""
+        # Add basic computed columns
+        dataframe = self._add_basic_computed_columns(dataframe, label_col, prediction_col)
+        
         # Prepare summary metrics and optionally persist to in-memory storage
         pair = metadata.get("pair", "unknown")
         try:
@@ -786,29 +668,93 @@ class LSTMStrategy_v46_1h(IStrategy):
         return dataframe
 
     def save_prediction_metrics(self, filename: str = "pred_metrics.csv") -> None:
-        """
-        Persist accumulated prediction metrics (in-memory) to `user_data` dir as CSV.
-        Called at the end of a backtest run to collect metrics across pairs.
-        """
+        """Save enhanced prediction metrics focused on prediction quality"""
         try:
-            if not getattr(self, 'pred_metrics_storage', None):
-                logger.info("No prediction metrics to save")
-                return
-            import csv
-            from pathlib import Path
-            base = Path(self.config.get("user_data_dir", "./user_data"))
-            out = base / filename
-            # Write header if file doesn't exist
-            write_header = not out.exists()
-            with out.open("a", newline='') as fh:
-                writer = csv.DictWriter(fh, fieldnames=list(self.pred_metrics_storage[0].keys()))
-                if write_header:
-                    writer.writeheader()
-                for row in self.pred_metrics_storage:
-                    writer.writerow(row)
-            logger.info(f"Saved prediction metrics to {out}")
+            # Try to use simple enhanced metrics saving
+            import sys
+            import os
+            sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+            from simple_enhanced_metrics import save_prediction_metrics_enhanced
+            save_prediction_metrics_enhanced(self, filename)
+            return
+            
+        except ImportError as e:
+            logger.warning(f"Simple enhanced metrics saving not available: {e}")
+        except Exception as e:
+            logger.error(f"Enhanced metrics saving failed: {e}")
+        
+        # Fallback to basic CSV saving
+        try:
+            if hasattr(self, 'pred_metrics_storage') and self.pred_metrics_storage:
+                from pathlib import Path
+                import csv
+                
+                base = Path(self.config.get("user_data_dir", "./user_data"))
+                out = base / filename
+                
+                write_header = not out.exists()
+                with out.open("a", newline='') as fh:
+                    writer = csv.DictWriter(fh, fieldnames=list(self.pred_metrics_storage[0].keys()))
+                    if write_header:
+                        writer.writeheader()
+                    for row in self.pred_metrics_storage:
+                        writer.writerow(row)
+                logger.info(f"Basic prediction metrics saved to {out}")
         except Exception as e:
             logger.warning(f"Failed to save prediction metrics: {e}")
+
+    def _check_performance_alerts(self):
+        """Check for performance issues and log alerts"""
+        try:
+            if not hasattr(self, 'enhanced_metrics'):
+                return
+            
+            # Get current performance for all pairs
+            pairs = getattr(self, 'pair_whitelist', ['BTC/USDT:USDT'])  # Default fallback
+            
+            for pair in pairs:
+                summary = self.enhanced_metrics.get_performance_summary(pair, days=7)
+                
+                if not summary:
+                    continue
+                
+                # Check correlation threshold
+                if summary.get('avg_correlation', 1.0) < 0.4:
+                    logger.warning(f"🔴 LOW CORRELATION ALERT: {pair} correlation={summary.get('avg_correlation', 0):.3f}")
+                
+                # Check direction accuracy
+                if summary.get('avg_direction_accuracy', 1.0) < 0.45:
+                    logger.warning(f"🔴 LOW ACCURACY ALERT: {pair} direction_accuracy={summary.get('avg_direction_accuracy', 0):.3f}")
+                
+                # Check Sharpe ratio
+                if summary.get('avg_sharpe_ratio', 0) < 0.5:
+                    logger.warning(f"⚠️  LOW SHARPE ALERT: {pair} sharpe_ratio={summary.get('avg_sharpe_ratio', 0):.2f}")
+                
+                # Check stability trend
+                if summary.get('model_stability_trend', 0) < -0.15:
+                    logger.warning(f"⚠️  STABILITY DECLINING: {pair} - consider retraining")
+            
+        except Exception as e:
+            logger.debug(f"Performance alerts check failed: {e}")
+
+    def get_prediction_quality_summary(self) -> dict:
+        """Get current prediction quality summary for monitoring"""
+        try:
+            if hasattr(self, 'enhanced_metrics'):
+                return self.enhanced_metrics.get_performance_summary()
+            else:
+                # Basic summary from stored metrics
+                if hasattr(self, 'pred_metrics_storage') and self.pred_metrics_storage:
+                    recent_metrics = self.pred_metrics_storage[-10:]  # Last 10 entries
+                    return {
+                        'avg_correlation': np.mean([m.get('correlation', 0) for m in recent_metrics]),
+                        'avg_rolling_accuracy': np.mean([m.get('rolling_accuracy', 0) for m in recent_metrics]),
+                        'avg_mae': np.mean([m.get('mae', 0) for m in recent_metrics]),
+                        'total_predictions': sum([m.get('total_predictions', 0) for m in recent_metrics])
+                    }
+        except Exception as e:
+            logger.error(f"Failed to get prediction quality summary: {e}")
+            return {}
 
     # -------------------- Fear & Greed helpers --------------------
     def load_historical_fng_data(self) -> pd.DataFrame | None:
