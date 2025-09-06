@@ -54,6 +54,7 @@ class LSTMStrategy_v46_1h(IStrategy):
                 "T": {"color": "blue", "plot_type": "line"},                    # True target/label
                 "&-s_target": {"color": "purple", "plot_type": "line"},         # FreqAI predictions
                 "&-s_target_mean": {"color": "brown", "plot_type": "line"},     # FreqAI mean predictions
+                "custom_pred_mean": {"color": "orange", "plot_type": "line"},   # Custom smoothed prediction
             },
             "Prediction Quality": {
                 "pred_confidence": {"color": "green", "plot_type": "line"},    # Prediction confidence
@@ -76,21 +77,27 @@ class LSTMStrategy_v46_1h(IStrategy):
     # Class-level storage for prediction metrics (persisted after backtests)
     pred_metrics_storage: list = []
 
-    # Fixed windows (non-optimized) to reduce complexity/overfit
+    # Fixed windows (non-optimized) to reduce complexity/overfit - updated for better signal exits
     fixed_vol_window = 24
     fixed_trend_window = 72
     fixed_stake_scaling_factor = 1.0
     fixed_confidence_threshold_multiplier = 1.0
     fixed_rolling_trend_threshold_multiplier = 1.0
-    fixed_soft_stoploss_pct = -0.15
-    fixed_min_profit_for_trailing = 0.001
-    fixed_initial_stop_duration_candles = 3
+    fixed_soft_stoploss_pct = -0.25  # More conservative to allow signal exits to work
+    fixed_min_profit_for_trailing = 0.015  # Higher threshold before trailing starts
+    fixed_initial_stop_duration_candles = 8  # More protection time for signal exits
 
     # High-confidence fallback threshold
     fixed_high_confidence_threshold = 0.90
 
-    # Smoothing of prediction
-    prediction_smoothing_window = IntParameter(3, 50, default=18, space="buy", load=True, optimize=True)
+    # Signal quality parameters
+    prediction_threshold = DecimalParameter(0.01, 0.5, default=0.05, decimals=3, space="buy", load=True, optimize=True)
+    momentum_confirmation_window = IntParameter(2, 10, default=3, space="buy", load=True, optimize=True)
+    signal_persistence_required = IntParameter(1, 5, default=2, space="buy", load=True, optimize=True)
+    
+    # Exit improvement parameters  
+    min_trade_duration_hours = IntParameter(6, 48, default=12, space="sell", load=True, optimize=True)
+    profit_target_multiplier = DecimalParameter(1.5, 4.0, default=2.0, decimals=1, space="sell", load=True, optimize=True)
 
     # Volume filter
     vol_rank_quantile = DecimalParameter(0.1, 0.5, default=0.18, decimals=2, space="buy", load=True, optimize=True)
@@ -114,10 +121,10 @@ class LSTMStrategy_v46_1h(IStrategy):
     use_trend_filter = CategoricalParameter([True, False], default=True, space="buy", load=True, optimize=hyperopt_categorical)
     use_mean_prediction_for_signal = CategoricalParameter([True, False], default=True, space="buy", load=True, optimize=hyperopt_categorical)
 
-    use_target_exit_filter = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)
-    use_trend_exit_filter = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)
+    use_target_exit_filter = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)  # Force True for testing
+    use_trend_exit_filter = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)  # Force True for testing
     use_timed_exit = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)
-    use_opposite_signal_exit = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)
+    use_opposite_signal_exit = CategoricalParameter([True, False], default=True, space="sell", load=False, optimize=hyperopt_categorical)  # Force True for testing
 
     minimal_roi = {"0": 1}
     stoploss = -1.0
@@ -233,7 +240,7 @@ class LSTMStrategy_v46_1h(IStrategy):
                     df[col] = df['close'] if 'close' in df.columns else 1.0
         
         # Calculate ATR similar to v45 (use 72 as in v45)
-        atr_window = 72
+        atr_window = self.fixed_vol_window
         atr_series = pd.Series(ta.ATR(df, timeperiod=atr_window), index=df.index)
         df["ATR"] = atr_series.bfill().ffill().fillna(1e-9)
         
@@ -393,27 +400,36 @@ class LSTMStrategy_v46_1h(IStrategy):
         std_tr = df['rolling_trend'].rolling(trend_win).std().ffill().fillna(1e-9)
         df['rolling_trend_scaled'] = ((df['rolling_trend'] - mean_tr) / std_tr.clip(lower=1e-9)).fillna(0)
 
-        # Smoothed prediction and std
-        if "&-s_target" in df.columns:
-            win = int(self.prediction_smoothing_window.value)
-            df['custom_pred_mean'] = df['&-s_target'].rolling(window=win, min_periods=1).mean().fillna(0)
-            df['custom_pred_std'] = df['&-s_target'].rolling(window=win, min_periods=1).std().fillna(0)
-        else:
-            df['custom_pred_mean'] = df.get('&-s_target_mean', 0.0)
-            df['custom_pred_std'] = df.get('&-s_target_std', 0.0)
-
-        # EMAs of prediction signal
-        pred_col = 'custom_pred_mean' if self.use_mean_prediction_for_signal.value else '&-s_target'
-        if pred_col not in df.columns or not df[pred_col].notna().any():
-            pred_col = '&-s_target'
-        if pred_col in df.columns:
-            slow = int(self.prediction_smoothing_window.value)
-            fast = max(2, slow // 3)
-            df['pred_ema_fast'] = ta.EMA(df[pred_col], timeperiod=int(fast))
-            df['pred_ema_slow'] = ta.EMA(df[pred_col], timeperiod=int(slow))
-        else:
-            df['pred_ema_fast'] = 0
-            df['pred_ema_slow'] = 0
+        # Enhanced signal generation with momentum confirmation
+        win = int(self.momentum_confirmation_window.value) * 2  # Use larger window for smoothing
+        df['custom_pred_mean'] = df['&-s_target'].rolling(window=win, min_periods=1).mean().fillna(0)
+        df['custom_pred_std'] = df['&-s_target'].rolling(window=win, min_periods=1).std().fillna(0)
+        
+        # Signal momentum and persistence
+        threshold = float(self.prediction_threshold.value)
+        df['pred_signal_raw'] = np.where(df['custom_pred_mean'] > threshold, 1, 
+                                np.where(df['custom_pred_mean'] < -threshold, -1, 0))
+        
+        # Momentum confirmation - signal must be strengthening
+        momentum_win = int(self.momentum_confirmation_window.value)
+        df['pred_momentum'] = df['custom_pred_mean'].diff(momentum_win)
+        df['momentum_aligned'] = ((df['pred_signal_raw'] == 1) & (df['pred_momentum'] > 0)) | \
+                                ((df['pred_signal_raw'] == -1) & (df['pred_momentum'] < 0))
+        
+        # Signal persistence - must hold for multiple periods
+        persistence = int(self.signal_persistence_required.value)
+        df['signal_persistent'] = (df['pred_signal_raw'].rolling(persistence).apply(
+            lambda x: (x == x.iloc[-1]).all() and x.iloc[-1] != 0, raw=False).fillna(False))
+        
+        # Combined high-quality signal
+        df['pred_signal_quality'] = df['momentum_aligned'] & df['signal_persistent']
+        
+        # EMA crossovers for additional confirmation (but not primary signal)
+        pred_col = 'custom_pred_mean'
+        slow = int(self.momentum_confirmation_window.value) * 2  # Use larger window for slow EMA
+        fast = max(2, slow // 3)
+        df['pred_ema_fast'] = ta.EMA(df[pred_col], timeperiod=int(fast))
+        df['pred_ema_slow'] = ta.EMA(df[pred_col], timeperiod=int(slow))
 
         # Thresholds
         df['rolling_trend_threshold_base'] = df['rolling_trend_scaled'].rolling(100, min_periods=10).median().ffill().fillna(0)
@@ -432,8 +448,16 @@ class LSTMStrategy_v46_1h(IStrategy):
         df['enter_short'] = 0
         df['enter_tag'] = None
         p = self.calculate_indicators(df)
-        long_sig = crossed_above(p['pred_ema_fast'], p['pred_ema_slow'])
-        short_sig = crossed_below(p['pred_ema_fast'], p['pred_ema_slow'])
+        
+        # Primary signals: High-quality prediction signals with momentum and persistence
+        quality_long = p['pred_signal_quality'] & (p['pred_signal_raw'] == 1)
+        quality_short = p['pred_signal_quality'] & (p['pred_signal_raw'] == -1)
+        
+        # EMA cross confirmation (supportive, not primary)
+        ema_cross_up = crossed_above(p['pred_ema_fast'], p['pred_ema_slow'])
+        ema_cross_down = crossed_below(p['pred_ema_fast'], p['pred_ema_slow'])
+        ema_aligned_long = (p['pred_ema_fast'] > p['pred_ema_slow'])
+        ema_aligned_short = (p['pred_ema_fast'] < p['pred_ema_slow'])
 
         def base(side: str | None = None):
             cond = (p['do_predict'] == 1)
@@ -448,18 +472,35 @@ class LSTMStrategy_v46_1h(IStrategy):
                     cond &= (p['rolling_trend_scaled'] < p['rolling_trend_threshold'])
             return cond
 
-        long_ok = long_sig & base('long')
-        short_ok = short_sig & base('short')
-        df.loc[long_ok, ['enter_long', 'enter_tag']] = (1, 'long')
-        df.loc[short_ok & (df['enter_long'] == 0), ['enter_short', 'enter_tag']] = (1, 'short')
+        # Primary entries: Quality signals with EMA alignment
+        long_ok = quality_long & ema_aligned_long & base('long')
+        short_ok = quality_short & ema_aligned_short & base('short')
+        df.loc[long_ok, ['enter_long', 'enter_tag']] = (1, 'long_quality')
+        df.loc[short_ok & (df['enter_long'] == 0), ['enter_short', 'enter_tag']] = (1, 'short_quality')
 
-        # High-confidence fallback
+        # Secondary entries: EMA cross with momentum confirmation
+        momentum_threshold = float(self.prediction_threshold.value) * 0.5
+        ema_with_momentum_long = ema_cross_up & (p['pred_momentum'] > 0) & (p['custom_pred_mean'] > momentum_threshold)
+        ema_with_momentum_short = ema_cross_down & (p['pred_momentum'] < 0) & (p['custom_pred_mean'] < -momentum_threshold)
+        
+        long_ema_ok = ema_with_momentum_long & base('long')
+        short_ema_ok = ema_with_momentum_short & base('short')
+        df.loc[long_ema_ok & (df['enter_long'] == 0) & (df['enter_short'] == 0), ['enter_long', 'enter_tag']] = (1, 'long_ema')
+        df.loc[short_ema_ok & (df['enter_long'] == 0) & (df['enter_short'] == 0), ['enter_short', 'enter_tag']] = (1, 'short_ema')
+
+        # High-confidence fallback (similar to original but with enhanced conditions)
         pred_col = 'custom_pred_mean' if self.use_mean_prediction_for_signal.value else '&-s_target'
         if pred_col not in p.columns:
             pred_col = '&-s_target'
+        
         high_conf = p['pred_confidence'] > self.fixed_high_confidence_threshold
-        fb_long = (p['do_predict'] == 1) & (p[pred_col] > 0.01 * p['atr_scaled']) & high_conf & crossed_above(p['rolling_trend_scaled'], p['rolling_trend_threshold'])
-        fb_short = (p['do_predict'] == 1) & (p[pred_col] < -0.01 * p['atr_scaled']) & high_conf & crossed_below(p['rolling_trend_scaled'], p['rolling_trend_threshold'])
+        strong_signal_threshold = float(self.prediction_threshold.value) * 1.5
+        
+        fb_long = (p['do_predict'] == 1) & (p[pred_col] > strong_signal_threshold) & high_conf & \
+                 (p['pred_momentum'] > 0) & crossed_above(p['rolling_trend_scaled'], p['rolling_trend_threshold'])
+        fb_short = (p['do_predict'] == 1) & (p[pred_col] < -strong_signal_threshold) & high_conf & \
+                  (p['pred_momentum'] < 0) & crossed_below(p['rolling_trend_scaled'], p['rolling_trend_threshold'])
+        
         df.loc[fb_long & (df['enter_long'] == 0) & (df['enter_short'] == 0), ['enter_long', 'enter_tag']] = (1, 'long_fallback')
         df.loc[fb_short & (df['enter_long'] == 0) & (df['enter_short'] == 0), ['enter_short', 'enter_tag']] = (1, 'short_fallback')
         return df
@@ -469,21 +510,74 @@ class LSTMStrategy_v46_1h(IStrategy):
         df['exit_short'] = False
         df['exit_tag'] = None
         p = self.calculate_indicators(df)
+        
+        # Minimum trade duration check (convert hours to periods)
+        min_duration_periods = int(self.min_trade_duration_hours.value)  # Assuming 1h timeframe
+        trade_duration_ok = (df['trade_duration'] >= min_duration_periods)
+        
+        # Primary exit signals: Quality signal reversal
+        quality_exit_long = p['pred_signal_quality'] & (p['pred_signal_raw'] == -1)
+        quality_exit_short = p['pred_signal_quality'] & (p['pred_signal_raw'] == 1)
+        
+        # EMA cross exits (secondary)
         exit_long_cross = crossed_below(p['pred_ema_fast'], p['pred_ema_slow'])
         exit_short_cross = crossed_above(p['pred_ema_fast'], p['pred_ema_slow'])
+        
+        # Profit target exits
+        profit_multiplier = float(self.profit_target_multiplier.value)
+        strong_profit_signal_long = (p['custom_pred_mean'] < -float(self.prediction_threshold.value) * profit_multiplier)
+        strong_profit_signal_short = (p['custom_pred_mean'] > float(self.prediction_threshold.value) * profit_multiplier)
+        
+        # Base conditions for exits
         base = (p['do_predict'] == 1) & (p['pred_confidence'] > p['confidence_threshold'])
         if self.use_vol_filter.value:
             base &= (p['vol_rank'] > p['vol_rank_dynamic_threshold'])
+        
+        # Signal-based exits with minimum duration
+        signal_exit_base = base & trade_duration_ok
+        
         if self.use_target_exit_filter.value:
-            df.loc[(df['exit_long'] == False) & exit_long_cross & base, ['exit_long', 'exit_tag']] = (True, 'target_exit_long_ema')
-            df.loc[(df['exit_short'] == False) & exit_short_cross & base, ['exit_short', 'exit_tag']] = (True, 'target_exit_short_ema')
+            # Primary: Quality signal reversals (most reliable exits)
+            quality_long_exits = (df['exit_long'] == False) & quality_exit_long & signal_exit_base
+            quality_short_exits = (df['exit_short'] == False) & quality_exit_short & signal_exit_base
+            
+            df.loc[quality_long_exits, ['exit_long', 'exit_tag']] = (True, 'quality_exit_long')
+            df.loc[quality_short_exits, ['exit_short', 'exit_tag']] = (True, 'quality_exit_short')
+            
+            # Secondary: Profit target exits (strong opposing signals, relaxed minimum duration)
+            profit_long_exits = (df['exit_long'] == False) & strong_profit_signal_long & base & (df['trade_duration'] >= 2)
+            profit_short_exits = (df['exit_short'] == False) & strong_profit_signal_short & base & (df['trade_duration'] >= 2)
+            
+            df.loc[profit_long_exits, ['exit_long', 'exit_tag']] = (True, 'profit_target_long')
+            df.loc[profit_short_exits, ['exit_short', 'exit_tag']] = (True, 'profit_target_short')
+            
+            # Tertiary: EMA cross exits (only after minimum duration, no profit requirement here)
+            ema_long_exits = (df['exit_long'] == False) & exit_long_cross & signal_exit_base
+            ema_short_exits = (df['exit_short'] == False) & exit_short_cross & signal_exit_base
+            
+            df.loc[ema_long_exits, ['exit_long', 'exit_tag']] = (True, 'ema_exit_long')
+            df.loc[ema_short_exits, ['exit_short', 'exit_tag']] = (True, 'ema_exit_short')
+        
         if self.use_trend_exit_filter.value:
-            df.loc[(df['exit_long'] == False) & crossed_below(p['rolling_trend_scaled'], p['rolling_trend_threshold']) & base, ['exit_long', 'exit_tag']] = (True, 'trend_exit_long')
-            df.loc[(df['exit_short'] == False) & crossed_above(p['rolling_trend_scaled'], p['rolling_trend_threshold']) & base, ['exit_short', 'exit_tag']] = (True, 'trend_exit_short')
+            trend_exit_base = base & trade_duration_ok
+            df.loc[(df['exit_long'] == False) & crossed_below(p['rolling_trend_scaled'], p['rolling_trend_threshold']) & trend_exit_base, 
+                   ['exit_long', 'exit_tag']] = (True, 'trend_exit_long')
+            df.loc[(df['exit_short'] == False) & crossed_above(p['rolling_trend_scaled'], p['rolling_trend_threshold']) & trend_exit_base, 
+                   ['exit_short', 'exit_tag']] = (True, 'trend_exit_short')
+        
         if self.use_timed_exit.value:
-            df.loc[(df['exit_long'] == False) & (df['trade_duration'] > self.timed_exit_duration.value) & (p['pred_confidence'] < p['confidence_threshold']), ['exit_long', 'exit_tag']] = (True, 'timed_exit_long')
-            df.loc[(df['exit_short'] == False) & (df['trade_duration'] > self.timed_exit_duration.value) & (p['pred_confidence'] < p['confidence_threshold']), ['exit_short', 'exit_tag']] = (True, 'timed_exit_short')
-        # Removed opposite-signal exit using enter_* to avoid backtest/live asymmetry
+            # Extended timed exit duration to reduce premature exits
+            extended_duration = max(self.timed_exit_duration.value, int(self.min_trade_duration_hours.value) * 2)
+            df.loc[(df['exit_long'] == False) & (df['trade_duration'] > extended_duration) & (p['pred_confidence'] < p['confidence_threshold']), 
+                   ['exit_long', 'exit_tag']] = (True, 'timed_exit_long')
+            df.loc[(df['exit_short'] == False) & (df['trade_duration'] > extended_duration) & (p['pred_confidence'] < p['confidence_threshold']), 
+                   ['exit_short', 'exit_tag']] = (True, 'timed_exit_short')
+        
+        # Opposite signal exits using enter_* signals (safe for backtesting, handled separately in live)
+        if self.use_opposite_signal_exit.value:    
+            df.loc[df['enter_short'] == 1, ['exit_long', 'exit_tag']] = (True, 'opposite_signal_short')
+            df.loc[df['enter_long'] == 1, ['exit_short', 'exit_tag']] = (True, 'opposite_signal_long')
+        
         return df
 
     # -------------------- Risk controls --------------------
@@ -493,6 +587,28 @@ class LSTMStrategy_v46_1h(IStrategy):
         if dataframe is None or dataframe.empty or not trade or not trade.open_rate:
             return -1.0
         last = dataframe.iloc[-1]
+        
+        # Calculate elapsed time in candles
+        tf_min = timeframe_to_minutes(self.timeframe)
+        elapsed_min = (current_time - trade.open_date_utc).total_seconds() / 60
+        dur_candles = elapsed_min / tf_min
+        
+        # Respect minimum trade duration from strategy parameters
+        min_duration_candles = int(self.min_trade_duration_hours.value)
+        
+        # During minimum duration period, use very conservative stop
+        if dur_candles < min_duration_candles:
+            return self.fixed_soft_stoploss_pct  # -0.25 (25% emergency stop only)
+        
+        # Before initial protection period ends, still be conservative
+        if dur_candles < self.fixed_initial_stop_duration_candles:
+            return self.fixed_soft_stoploss_pct
+            
+        # Only start dynamic stoploss after minimum profit threshold
+        if current_profit < self.fixed_min_profit_for_trailing:
+            return self.fixed_soft_stoploss_pct
+
+        # Calculate ATR-based dynamic stop
         if 'atr' in last and pd.notna(last.get('atr')) and last.get('atr', 0) > 0:
             atr = last['atr']
         else:
@@ -500,19 +616,16 @@ class LSTMStrategy_v46_1h(IStrategy):
             atr = atr_series.iloc[-1] if atr_series is not None and not atr_series.empty and pd.notna(atr_series.iloc[-1]) else current_rate * 0.01
         atr = max(atr, current_rate * 0.005)
 
-        tf_min = timeframe_to_minutes(self.timeframe)
-        elapsed_min = (current_time - trade.open_date_utc).total_seconds() / 60
-        dur_candles = elapsed_min / tf_min
-        if dur_candles < self.fixed_initial_stop_duration_candles:
-            return self.fixed_soft_stoploss_pct
-        if current_profit < self.fixed_min_profit_for_trailing:
-            return self.fixed_soft_stoploss_pct
-
-        atr_mult = float(self.atr_stoploss_multiplier.value)
+        # Apply ATR multiplier with more conservative approach
+        atr_mult = float(self.atr_stoploss_multiplier.value) * 1.5  # Make ATR stop less aggressive
         hard_max = float(self.hard_max_stoploss_pct.value)
         stop_abs = atr * atr_mult
         stop_pct = -(stop_abs / trade.open_rate)
         final_sl = max(stop_pct, hard_max)
+        
+        # Ensure the dynamic stop is not more aggressive than our soft stop
+        final_sl = max(final_sl, self.fixed_soft_stoploss_pct)
+        
         return final_sl if final_sl < 0 else self.fixed_soft_stoploss_pct
 
     def custom_stake_amount(self, pair: str, current_time: datetime, current_rate: float, proposed_stake: float,
@@ -551,20 +664,57 @@ class LSTMStrategy_v46_1h(IStrategy):
     def confirm_trade_entry(self, pair: str, order_type: str, amount: float, rate: float,
                             time_in_force: str, current_time: datetime, entry_tag: str | None,
                             side: str, **kwargs) -> bool:
+        """
+        Called before placing an order.
+        In live/dry mode, if an opposite position exists, we exit it immediately.
+        In backtesting, this check is bypassed as populate_exit_trend handles opposite exits.
+        """
+        # Access runmode via self.dp (data provider)
         runmode = getattr(self.dp, 'runmode', None)
+
+        # Optional: Add this log to see what runmode is being detected
+        # logger.info(f"CONFIRM_TRADE_ENTRY: Pair: {pair}, Side: {side}, Detected Runmode: {runmode}")
+
         if runmode in (RunMode.DRY_RUN, RunMode.LIVE):
-            # Optional: close opposite trade first
-            try:
-                open_trades = Trade.get_trades([Trade.pair == pair, Trade.is_open.is_(True)])
-                for t in open_trades:
-                    if (side == 'long' and t.is_short) or (side == 'short' and not t.is_short):
+            # Live/Dry-run: Check for open trades and handle opposite positions
+            # This is the block that should only run in live/dry.
+            open_trades = Trade.get_trades([Trade.pair == pair, Trade.is_open.is_(True)])
+            
+            if open_trades:
+                for trade_obj in open_trades: # Renamed to avoid conflict
+                    if (side == "long" and trade_obj.is_short) or \
+                       (side == "short" and not trade_obj.is_short):
+                        # Opposite position exists - force exit first
+                        logger.info(
+                            f"CONFIRM_ENTRY (LIVE/DRY): Forcing exit of {pair} "
+                            f"{'short' if trade_obj.is_short else 'long'} position "
+                            f"before entering {side} position."
+                        )
+                        
                         if hasattr(self.freqtrade, 'execute_trade_exit'):
-                            self.freqtrade.execute_trade_exit(trade=t, limit=rate, exit_check=True, exit_tag=f"confirm_exit_opposite_{side}")
-                        break
-            except Exception as e:
-                logger.warning(f"confirm_trade_entry: {e}")
+                            self.freqtrade.execute_trade_exit(
+                                trade=trade_obj, 
+                                limit=rate, 
+                                exit_check=True, 
+                                exit_tag=f"confirm_exit_opposite_{side}"
+                            )
+                            logger.info(f"CONFIRM_ENTRY (LIVE/DRY): Opposite trade {trade_obj.id} for {pair} exited.")
+                        else:
+                            logger.warning("CONFIRM_ENTRY (LIVE/DRY): self.freqtrade.execute_trade_exit not available.")
+                        
+                        return True # Allow new entry after attempting exit
+            
+            return True # No opposite trade, or exit handled. Allow entry.
+
+        elif runmode == RunMode.BACKTEST:
+            # Backtesting: The logic for exiting opposite trades is handled by
+            # populate_exit_trend. We simply allow the entry signal here.
             return True
-        return True
+            
+        else:
+            # Other modes (e.g., HYPEROPT, PLOT) or if runmode is None
+            # Default to allowing the trade.
+            return True
 
     # -------------------- Enhanced Metrics System --------------------
     def compute_prediction_metrics(self, dataframe: pd.DataFrame, metadata: dict, 
