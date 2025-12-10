@@ -69,6 +69,7 @@ class LSTMStrategy_v45_1h(IStrategy):
                 "rolling_trend_scaled": {"color": "blue", "plot_type": "line"},
                 "rolling_trend_threshold": {"color": "green", "plot_type": "line"},
             },
+
         },
     }
 
@@ -82,22 +83,23 @@ class LSTMStrategy_v45_1h(IStrategy):
     pred_metrics_storage = []  # Class-level storage for all pairs
 
     # hyperopt categorical parameters switch
-    hyperopt_categorical = False
+    hyperopt_categorical = True
 
     # use leverage
     use_leverage = True
 
-    # --- FIXED PARAMETERS (optimize=False) ---
+    # --- FIXED PARAMETERS (optimize=False by default) ---
+    params = False
     # These are set to sensible defaults and not hyperoptimized to reduce complexity.
-    fixed_vol_window = 24 # For 1h timeframe, daily ATR-like context
-    fixed_trend_window = 72 # For 1h timeframe, 3-day trend context
-    fixed_stake_scaling_factor = 1.0
-    fixed_confidence_threshold_multiplier = 1.0 # Base is already dynamic
-    fixed_rolling_trend_threshold_multiplier = 1.0 # Base is already dynamic
-    fixed_soft_stoploss_pct = -0.15 # Disaster stop
-    fixed_min_profit_for_trailing = 0.001 # Minimal profit to enable dynamic stop
-    fixed_initial_stop_duration_candles = 3 # Short period for initial stop
-    fixed_high_confidence_threshold = 0.90 # For fallback entries, should be rare
+    vol_window = IntParameter(6, 144, default=72, space="buy", load=True, optimize=not params)
+    trend_window = IntParameter(24, 288, default=144, space="buy", load=True, optimize=not params)
+    stake_scaling_factor = DecimalParameter(0.1, 1.0, default=1.0, decimals=2, space="buy", load=True, optimize=not params)
+    confidence_threshold_multiplier = DecimalParameter(0.1, 2.0, default=1.0, decimals=2, space="buy", load=True, optimize=not params)
+    rolling_trend_threshold_multiplier = DecimalParameter(0.1, 2.0, default=1.0, decimals=2, space="buy", load=True, optimize=not params)
+    soft_stoploss_pct = DecimalParameter(-0.25, -0.05, default=-0.15, decimals=2, space="sell", load=True, optimize=not params)
+    min_profit_for_trailing = DecimalParameter(0.0, 0.1, default=0.001, decimals=3, space="sell", load=True, optimize=not params)
+    initial_stop_duration_candles = IntParameter(1, 10, default=3, space="sell", load=True, optimize=not params)
+    high_confidence_threshold = DecimalParameter(0.8, 0.95, default=0.90, decimals=2, space="sell", load=True, optimize=not params)
 
     # --- HYPEROPTABLE PARAMETERS (Core Sensitivities) ---
 
@@ -111,7 +113,7 @@ class LSTMStrategy_v45_1h(IStrategy):
     timed_exit_duration = IntParameter(24, 168, default=72, space="sell", load=True, optimize=True) # e.g., 1 to 7 days on 1h
 
     # ✅ Stoploss Parameters (Core Dynamic Parts)
-    atr_stoploss_multiplier = DecimalParameter(1.0, 8.0, default=3.0, decimals=1, space="sell", load=True, optimize=True)
+    atr_stoploss_multiplier = DecimalParameter(1.0, 8.0, default=3.0, decimals=2, space="sell", load=True, optimize=True)
     historical_volatility_factor = DecimalParameter(0.1, 1.5, default=0.5, decimals=2, space="sell", load=True, optimize=True) 
     prediction_confidence_factor = DecimalParameter(0.1, 1.5, default=0.5, decimals=2, space="sell", load=True, optimize=True) 
     hard_max_stoploss_pct = DecimalParameter(-0.25, -0.05, default=-0.15, decimals=2, space="sell", load=True, optimize=True) # Replaces max_loss_floor/ceiling/vol_multiplier
@@ -119,7 +121,9 @@ class LSTMStrategy_v45_1h(IStrategy):
     # ✅ Stake/Leverage Dynamics (If use_leverage is True or for dynamic stake)
     leverage_range_end = IntParameter(2, 10, default=3, space="buy", load=True, optimize=use_leverage)
     volatility_influence = DecimalParameter(0.0, 1.0, default=0.2, decimals=3, space="buy", load=True, optimize=True) # For stake and leverage
-    confidence_influence = DecimalParameter(0.0, 1.0, default=0.2, decimals=3, space="buy", load=True, optimize=True) # For stake and leverage  
+    confidence_influence = DecimalParameter(0.0, 1.0, default=0.2, decimals=3, space="buy", load=True, optimize=True) # For stake and leverage
+    
+    # Order flow parameters removed - focusing on technical indicators only  
 
     # --- CATEGORICAL PARAMETERS (Controlled by hyperopt_categorical switch) ---
     use_crossed_entry = CategoricalParameter([True, False], default=True, space="buy", load=True, optimize=hyperopt_categorical)
@@ -131,39 +135,36 @@ class LSTMStrategy_v45_1h(IStrategy):
     use_target_exit_filter = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)
     use_trend_exit_filter = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)
     use_timed_exit = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)
-    use_opposite_signal_exit = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)  
+    use_opposite_signal_exit = CategoricalParameter([True, False], default=True, space="sell", load=True, optimize=hyperopt_categorical)
+    
+    # Order flow filters removed - focusing on technical indicators only  
 
-    # Buy hyperspace params:
-    # Buy hyperspace params:
-    buy_params = {
-        "confidence_influence": 0.695,
-        "dynamic_long_threshold_multiplier": 0.94,
-        "dynamic_short_threshold_multiplier": 0.92,
-        "leverage_range_end": 2,
-        "prediction_smoothing_window": 3,
-        "vol_rank_quantile": 0.1,
-        "volatility_influence": 0.564,
-        "use_confidence_filter_entry": True,  # value loaded from strategy
-        "use_crossed_entry": True,  # value loaded from strategy
-        "use_mean_prediction_for_signal": True,  # value loaded from strategy
-        "use_trend_filter": True,  # value loaded from strategy
-        "use_vol_filter": True,  # value loaded from strategy
-    }
+    # # Buy hyperspace params:
+    # buy_params = {
+    #     "confidence_influence": 0.088,
+    #     "leverage_range_end": 2,
+    #     "prediction_smoothing_window": 18,
+    #     "vol_rank_quantile": 0.18,
+    #     "volatility_influence": 0.937,
+    #     "use_confidence_filter_entry": True,  # value loaded from strategy
+    #     "use_crossed_entry": True,  # value loaded from strategy
+    #     "use_mean_prediction_for_signal": True,  # value loaded from strategy
+    #     "use_trend_filter": True,  # value loaded from strategy
+    #     "use_vol_filter": True,  # value loaded from strategy
+    # }
 
-    # Sell hyperspace params:
-    sell_params = {
-        "atr_stoploss_multiplier": 1.2,
-        "exit_long_threshold_multiplier": 0.99,
-        "exit_short_threshold_multiplier": 1.29,
-        "hard_max_stoploss_pct": -0.16,
-        "historical_volatility_factor": 0.64,
-        "prediction_confidence_factor": 1.25,
-        "timed_exit_duration": 99,
-        "use_opposite_signal_exit": True,  # value loaded from strategy
-        "use_target_exit_filter": True,  # value loaded from strategy
-        "use_timed_exit": True,  # value loaded from strategy
-        "use_trend_exit_filter": True,  # value loaded from strategy
-    }
+    # # Sell hyperspace params:
+    # sell_params = {
+    #     "atr_stoploss_multiplier": 1.0,
+    #     "hard_max_stoploss_pct": -0.14,
+    #     "historical_volatility_factor": 0.71,
+    #     "prediction_confidence_factor": 1.12,
+    #     "timed_exit_duration": 45,
+    #     "use_opposite_signal_exit": True,  # value loaded from strategy
+    #     "use_target_exit_filter": True,  # value loaded from strategy
+    #     "use_timed_exit": True,  # value loaded from strategy
+    #     "use_trend_exit_filter": True,  # value loaded from strategy
+    # }
     
     # ROI table:  # value loaded from strategy
     minimal_roi = {
@@ -245,21 +246,23 @@ class LSTMStrategy_v45_1h(IStrategy):
                 # MODIFIED fillna
                 dataframe[col] = dataframe[col].bfill().ffill().fillna(0)
                 
-        # # ✅ Key Technical Indicators (Retained)
-        # dataframe["%-roc-period"] = ta.ROC(dataframe, timeperiod=5)  # Trend Direction
-        # dataframe['%-volume_roc-period'] = ta.ROC(dataframe['volume'], timeperiod=5)
-        # dataframe['%-volume_rsi-period'] = ta.RSI(dataframe['volume'], timeperiod=14)
-        # dataframe['%-obv-period'] = ta.OBV(dataframe) # On Balance Volume
+        # ✅ Key Technical Indicators (Retained)
+        dataframe[f"%-roc-{period}"] = ta.ROC(dataframe, timeperiod=period)  # Trend Direction
+        dataframe[f"%-volume_roc-{period}"] = ta.ROC(dataframe['volume'], timeperiod=period)
+        dataframe[f"%-volume_rsi-{period}"] = ta.RSI(dataframe['volume'], timeperiod=period)
+        dataframe[f"%-obv-{period}"] = ta.OBV(dataframe) # On Balance Volume
+        
 
-        # # ✅ Fix NaNs
-        # dataframe.fillna(0, inplace=True)
 
-        # # ✅ Apply Z-Score Normalization to **volatile features only**
-        # # Added %-bb_width_pct-period to zscore
-        # zscore_columns = ["%-bb_width_pct-period", "%-rsi-period", "%-roc-period"]
-        # for col in zscore_columns:
-        #     if col in dataframe.columns: # Check if column exists before applying zscore
-        #          dataframe.loc[:, f"{col}-zscore"] = pd.Series(zscore(dataframe[col]), index=dataframe.index).fillna(0)
+        # ✅ Fix NaNs
+        dataframe.fillna(0, inplace=True)
+
+        # ✅ Apply Z-Score Normalization to **volatile features only**
+        zscore_columns = ["%-bb_width_pct-period", "%-rsi-period", "%-roc-period", "%-cci-period", "%-mfi-period", "%-adx-period", "%-aroon_osc-period"]
+        for col in zscore_columns:
+            col_name = col.replace("-period", f"-{period}")
+            if col_name in dataframe.columns: # Check if column exists before applying zscore
+                 dataframe.loc[:, f"{col_name}-zscore"] = pd.Series(zscore(dataframe[col_name]), index=dataframe.index).fillna(0)
 
         return dataframe
 
@@ -292,22 +295,6 @@ class LSTMStrategy_v45_1h(IStrategy):
             if col in dataframe.columns:
                 # MODIFIED fillna
                 dataframe[col] = dataframe[col].bfill().ffill().fillna(0)
-
-        return dataframe
-
-    def feature_engineering_expand_basic(self, dataframe: DataFrame, metadata: Dict, **kwargs):
-
-        dataframe["%-pct-change"] = dataframe["close"].pct_change()
-        dataframe["%-raw_volume"] = dataframe["volume"]
-        dataframe["%-raw_price"] = dataframe["close"]
-
-        # ✅ **Optimized Lag-Based Features**
-        # lag_amount = 6
-        # lag_features = ["close", "volume"]
-
-        # lagged_data = {f"{feature}_lag{lag}": dataframe[feature].shift(lag) for feature in lag_features for lag in range(1, lag_amount + 1)}
-        # dataframe = pd.concat([dataframe, pd.DataFrame(lagged_data, index=dataframe.index)], axis=1)
-        # dataframe.loc[:, dataframe.columns.str.contains("_lag")] = dataframe.loc[:, dataframe.columns.str.contains("_lag")].bfill()
 
         return dataframe
 
@@ -368,14 +355,47 @@ class LSTMStrategy_v45_1h(IStrategy):
         dataframe.loc[:, "%-fourier_price_norm"] = dataframe["%-fourier_price"] / (dataframe["atr"] + 1e-6)
 
         # ✅ Apply Z-Score Normalization to **volatile features only**
-        # Added %-atr_pct to zscore
-        zscore_columns = ["%-rolling_volatility", "%-rolling_mean", "%-fourier_price_norm", "%-atr_pct"]
+        # Enhanced technical indicators for zscore
+        zscore_columns = ["%-rolling_volatility", "%-rolling_mean", "%-fourier_price_norm", "%-atr_pct", "%-price_momentum_smooth", "%-volatility_ratio", "%-ema_conv_8_21", "%-ema_conv_21_50"]
         for col in zscore_columns:
              if col in dataframe.columns: # Check if column exists before applying zscore
                  dataframe.loc[:, f"{col}-zscore"] = pd.Series(zscore(dataframe[col]), index=dataframe.index).fillna(0)
 
-        # ✅ Incorporate order flow features
-        # dataframe = self.get_order_flow_features(dataframe, metadata)
+        # ✅ Advanced Technical Analysis Features
+        
+        # Price pattern recognition
+        dataframe['%-price_momentum'] = ta.MOM(dataframe, timeperiod=14)
+        dataframe['%-price_momentum_smooth'] = dataframe['%-price_momentum'].rolling(window=5).mean().fillna(0)
+        
+        # Enhanced volatility measures
+        dataframe['%-true_range'] = ta.TRANGE(dataframe)
+        dataframe['%-volatility_ratio'] = dataframe['%-true_range'] / dataframe['close']
+        
+        # Multi-timeframe EMAs for trend analysis
+        dataframe['%-ema_8'] = ta.EMA(dataframe, timeperiod=8)
+        dataframe['%-ema_21'] = ta.EMA(dataframe, timeperiod=21)
+        dataframe['%-ema_50'] = ta.EMA(dataframe, timeperiod=50)
+        
+        # EMA convergence/divergence signals
+        dataframe['%-ema_conv_8_21'] = (dataframe['%-ema_8'] - dataframe['%-ema_21']) / dataframe['%-ema_21']
+        dataframe['%-ema_conv_21_50'] = (dataframe['%-ema_21'] - dataframe['%-ema_50']) / dataframe['%-ema_50']
+        
+        # Relative Strength compared to moving averages
+        dataframe['%-price_vs_ema8'] = (dataframe['close'] - dataframe['%-ema_8']) / dataframe['%-ema_8']
+        dataframe['%-price_vs_ema21'] = (dataframe['close'] - dataframe['%-ema_21']) / dataframe['%-ema_21']
+        dataframe['%-price_vs_ema50'] = (dataframe['close'] - dataframe['%-ema_50']) / dataframe['%-ema_50']
+        
+        # Advanced volume analysis (if available)
+        if 'volume' in dataframe.columns:
+            # Volume moving averages
+            dataframe['%-volume_sma_20'] = dataframe['volume'].rolling(window=20).mean()
+            dataframe['%-volume_ratio'] = dataframe['volume'] / (dataframe['%-volume_sma_20'] + 1e-6)
+            
+            # Price-Volume trend
+            dataframe['%-pvt'] = ta.AD(dataframe)  # Accumulation/Distribution as PVT proxy
+            dataframe['%-pvt_smooth'] = dataframe['%-pvt'].rolling(window=14).mean().fillna(0)
+        
+        # Technical analysis summary - focusing on pure price action
 
         # ✅ Fetch Fear & Greed Index
         current_date = dataframe['date'].iloc[-1] if 'date' in dataframe else None
@@ -392,168 +412,181 @@ class LSTMStrategy_v45_1h(IStrategy):
 
         return dataframe
 
+    def create_target_T(self, dataframe: DataFrame) -> pd.Series:
+        """
+        Creates ENHANCED target for regression with improved range alignment.
+        
+        Key improvements to address target-prediction range mismatch:
+        1. Tighter Z-score normalization window (50 periods instead of 100)
+        2. Smaller clip range (-2.5, 2.5) to align with prediction range [-1.81, 1.84]
+        3. Additional post-processing scaling to ensure target range matches prediction capability
+        4. Robust outlier handling before normalization
+        
+        Formula:
+        - Raw forward return: log(Close_t+K / Close_t) * 100
+        - Smooth with EWM (exponential weighted moving average)  
+        - Normalize by rolling volatility
+        - Enhanced Z-score standardization with tighter window
+        - Clip to [-2.5, 2.5] range for better alignment
+        - Final scaling to ensure optimal target-prediction range alignment
+        """
+        K = self.freqai_info["feature_parameters"]["label_period_candles"]  # 1 hour forward (12 * 5min bars)
+        VOL_WINDOW = 24  # Rolling volatility window
+        SMOOTH_SPAN = 6  # EWM smoothing span
+        ZSCORE_WINDOW = 50  # Tighter Z-score window for better range control
+        CLIP_RANGE = 2.5  # Smaller range to align with prediction capability
+        
+        # Calculate raw forward return
+        raw_return = np.log(
+            dataframe['close'].shift(-K) / (dataframe['close'] + 1e-10)
+        ) * 100  # In percentage
+        
+        # Exponential smoothing (better than simple MA for recent data)
+        smoothed_return = raw_return.ewm(span=SMOOTH_SPAN, adjust=False).mean()
+        
+        # Calculate rolling volatility for normalization
+        rolling_vol = raw_return.rolling(window=VOL_WINDOW, min_periods=5).std()
+        
+        # Normalize by volatility (prevents target from being too large in volatile periods)
+        normalized_return = smoothed_return / (rolling_vol + 0.1)  # +0.1 to avoid div by zero
+        
+        # Enhanced Z-score standardization with tighter window for better range control
+        rolling_mean = normalized_return.rolling(window=ZSCORE_WINDOW, min_periods=15).mean()
+        rolling_std = normalized_return.rolling(window=ZSCORE_WINDOW, min_periods=15).std()
+        zscore_return = (normalized_return - rolling_mean) / (rolling_std + 0.05)
+        
+        # Apply robust outlier filtering before clipping (remove extreme outliers)
+        q99 = zscore_return.quantile(0.99)
+        q1 = zscore_return.quantile(0.01)
+        zscore_return = zscore_return.clip(lower=q1, upper=q99)
+        
+        # Clip to tighter range for better alignment with prediction capability
+        clipped_target = np.clip(zscore_return, -CLIP_RANGE, CLIP_RANGE)
+        
+        # Final scaling to optimize target-prediction range alignment
+        # Target current range: [-3.31, 3.29], Prediction range: [-1.81, 1.84]  
+        # Apply scaling factor to bring target range closer to prediction range
+        scaling_factor = 0.7  # Reduces target range from ~[-2.5, 2.5] to ~[-1.75, 1.75]
+        scaled_target = clipped_target * scaling_factor
+        
+        return scaled_target.fillna(0)
+        
     # def create_target_T(self, dataframe: pd.DataFrame) -> pd.Series:
     #     """
-    #     Creates a new target (T) based on normalized future price change using ATR.
-    #     Removed tanh() transformation.
-    #     Simplified normalization to use ATR only.
+    #     Creates a target 'T' for FreqAI with:
+    #     1. Inverse dynamic lookahead (smoother transition).
+    #     2. Future change calculated as a percentage.
+    #     3. Target 'T' using linear scaling and clipping (less saturation than tanh).
+    #     4. Enhanced smoothing for reduced noise.
     #     """
-
-    #     window = 72
+    #     # --- Tunable Parameters for Target Generation ---
+    #     base_window = self.FEATURE_ATR_PERIOD  # Main window for ATR and TS smoothing
+    #     min_lookahead = 2
+    #     max_lookahead = 12
         
-    #     dataframe["ATR"] = ta.ATR(dataframe, timeperiod=window).bfill()  # ATR-based normalization
-    #     dataframe["close"] = dataframe["close"].replace(0, np.nan).bfill()  # Prevent division by zero
+    #     # Volatility thresholds for lookahead scaling (ATR % of price)
+    #     low_vol_threshold_pct = 0.5  # Lower smoothed_vol_pct -> max_lookahead
+    #     high_vol_threshold_pct = 3.0 # Higher smoothed_vol_pct -> min_lookahead
+        
+    #     # Smoothing for dynamic lookahead's volatility input
+    #     vol_smoothing_window = 10 # Increased from 5 for smoother lookahead changes
+        
+    #     # Min periods for TS_pct rolling mean (smoother TS_pct)
+    #     ts_pct_min_periods = base_window // 2 # Increased from base_window // 3
+        
+    #     # Parameters for adaptive linear scaling of T_raw (replaces tanh)
+    #     # We'll scale T_raw so that its 98th percentile (absolute) maps to this value.
+    #     target_scaled_magnitude_at_percentile = 1.5 
+    #     # Final hard clipping range for T after scaling.
+    #     final_clip_range_abs = 2.0 
+        
+    #     # Optional: Light final smoothing for T
+    #     final_T_smoothing_window = 3 # Set to 0 or 1 to disable
 
-    #     # ✅ Compute dynamic lookahead (ensuring valid values)
-    #     dataframe["lookahead_dynamic"] = np.clip((dataframe["ATR"] / dataframe["close"]) * 100, 5, 24).fillna(10).astype(int)
+    #     # --- 1. Prepare Data & Calculate ATR ---
+    #     df_copy = dataframe.copy()
+        
+    #     for col in ['close', 'high', 'low']:
+    #         if col in df_copy.columns:
+    #             # MODIFIED fillna
+    #             df_copy[col] = pd.to_numeric(df_copy[col], errors='coerce').replace(0, np.nan).bfill().ffill()
+    #         else:
+    #             logger.warning(f"Column {col} missing in create_target_T for {dataframe['pair'].iloc[0] if 'pair' in dataframe.columns else 'N/A'}.")
+    #             if col == 'close' and col not in df_copy.columns: df_copy[col] = 1.0 
+    #             elif col not in df_copy.columns: df_copy[col] = df_copy['close'] if 'close' in df_copy.columns else 1.0
 
-    #     # ✅ Compute Future Price Change dynamically using a loop
-    #     future_change = []
-    #     for i in range(len(dataframe)):
-    #         try:
-    #             lookahead = int(dataframe["lookahead_dynamic"].iloc[i])
-    #             future_index = i + lookahead
-    #             if future_index >= len(dataframe):
-    #                 future_change.append(np.nan) # Handle cases where future index is out of bounds
+    #     # MODIFIED: Convert ta.ATR output to Series and use .bfill().ffill()
+    #     atr_series_target = pd.Series(ta.ATR(df_copy, timeperiod=base_window), index=df_copy.index)
+    #     df_copy["ATR"] = atr_series_target.bfill().ffill().fillna(1e-9)
+        
+    #     # --- 2. Calculate Smoother Inverse Dynamic Lookahead ---
+    #     # MODIFIED fillna
+    #     current_close_safe = df_copy["close"].replace(0, np.nan).bfill().ffill().fillna(1e-9)
+    #     vol_estimate_pct = (df_copy["ATR"] / current_close_safe) * 100
+    #     # Increased smoothing for smoothed_vol_pct
+    #     df_copy["smoothed_vol_pct"] = vol_estimate_pct.rolling(
+    #         vol_smoothing_window, min_periods=max(1, vol_smoothing_window // 3)
+    #     ).mean().bfill().ffill().fillna((low_vol_threshold_pct + high_vol_threshold_pct) / 2) # MODIFIED fillna
+        
+    #     inverted_progress = (high_vol_threshold_pct - df_copy["smoothed_vol_pct"]) / \
+    #                         (high_vol_threshold_pct - low_vol_threshold_pct + 1e-9)
+    #     clipped_inverted_progress = np.clip(inverted_progress, 0, 1)
+    #     df_copy["lookahead_dynamic"] = min_lookahead + clipped_inverted_progress * (max_lookahead - min_lookahead)
+    #     df_copy["lookahead_dynamic"] = df_copy["lookahead_dynamic"].round().fillna((min_lookahead + max_lookahead) // 2).astype(int)
+
+    #     # --- 3. Calculate Future Percentage Change ---
+    #     future_change_pct_list = []
+    #     close_series = df_copy["close"].to_numpy()
+    #     lookahead_series = df_copy["lookahead_dynamic"].to_numpy()
+    #     len_df = len(df_copy)
+
+    #     for i in range(len_df):
+    #         current_close_val = close_series[i]
+    #         if np.isnan(current_close_val) or current_close_val == 0:
+    #             future_change_pct_list.append(np.nan)
+    #             continue
+    #         lookahead = lookahead_series[i]
+    #         future_index = i + lookahead
+    #         if future_index >= len_df:
+    #             future_change_pct_list.append(np.nan)
+    #         else:
+    #             future_close_val = close_series[future_index]
+    #             if np.isnan(future_close_val):
+    #                 future_change_pct_list.append(np.nan)
     #             else:
-    #                 future_close = dataframe["close"].iloc[future_index]
-    #                 future_change.append(future_close - dataframe["close"].iloc[i])
-    #         except (KeyError, IndexError) as e:
-    #             print(f"Error calculating future change: {e}")
-    #             future_change.append(np.nan)  # Handle cases where row.name is not a valid index
-
-    #     dataframe["future_change"] = future_change
-
-    #     # ✅ Compute Trend Strength Using Future Price Change
-    #     dataframe["TS"] = dataframe["future_change"].rolling(window).mean()
-
-    #     # ✅ Normalize Trend Strength Using ATR ONLY
-    #     dataframe["T"] = dataframe["TS"] / (dataframe["ATR"] + 1e-6) # Simplified Normalization
-
-    #     # ❌ REMOVED: Apply `tanh()` to Limit Extreme Values
-    #     dataframe["T"] = np.tanh(dataframe["T"])
-
-    #     # ✅ Fill NaNs (no longer inplace)
-    #     dataframe["T"] = dataframe["T"].fillna(0)
-
-    #     return dataframe["T"]
-        
-    def create_target_T(self, dataframe: pd.DataFrame) -> pd.Series:
-        """
-        Creates a target 'T' for FreqAI with:
-        1. Inverse dynamic lookahead (smoother transition).
-        2. Future change calculated as a percentage.
-        3. Target 'T' using linear scaling and clipping (less saturation than tanh).
-        4. Enhanced smoothing for reduced noise.
-        """
-        # --- Tunable Parameters for Target Generation ---
-        base_window = self.FEATURE_ATR_PERIOD  # Main window for ATR and TS smoothing
-        min_lookahead = 2
-        max_lookahead = 12
-        
-        # Volatility thresholds for lookahead scaling (ATR % of price)
-        low_vol_threshold_pct = 0.5  # Lower smoothed_vol_pct -> max_lookahead
-        high_vol_threshold_pct = 3.0 # Higher smoothed_vol_pct -> min_lookahead
-        
-        # Smoothing for dynamic lookahead's volatility input
-        vol_smoothing_window = 10 # Increased from 5 for smoother lookahead changes
-        
-        # Min periods for TS_pct rolling mean (smoother TS_pct)
-        ts_pct_min_periods = base_window // 2 # Increased from base_window // 3
-        
-        # Parameters for adaptive linear scaling of T_raw (replaces tanh)
-        # We'll scale T_raw so that its 98th percentile (absolute) maps to this value.
-        target_scaled_magnitude_at_percentile = 1.5 
-        # Final hard clipping range for T after scaling.
-        final_clip_range_abs = 2.0 
-        
-        # Optional: Light final smoothing for T
-        final_T_smoothing_window = 3 # Set to 0 or 1 to disable
-
-        # --- 1. Prepare Data & Calculate ATR ---
-        df_copy = dataframe.copy()
-        
-        for col in ['close', 'high', 'low']:
-            if col in df_copy.columns:
-                # MODIFIED fillna
-                df_copy[col] = pd.to_numeric(df_copy[col], errors='coerce').replace(0, np.nan).bfill().ffill()
-            else:
-                logger.warning(f"Column {col} missing in create_target_T for {dataframe['pair'].iloc[0] if 'pair' in dataframe.columns else 'N/A'}.")
-                if col == 'close' and col not in df_copy.columns: df_copy[col] = 1.0 
-                elif col not in df_copy.columns: df_copy[col] = df_copy['close'] if 'close' in df_copy.columns else 1.0
-
-        # MODIFIED: Convert ta.ATR output to Series and use .bfill().ffill()
-        atr_series_target = pd.Series(ta.ATR(df_copy, timeperiod=base_window), index=df_copy.index)
-        df_copy["ATR"] = atr_series_target.bfill().ffill().fillna(1e-9)
-        
-        # --- 2. Calculate Smoother Inverse Dynamic Lookahead ---
-        # MODIFIED fillna
-        current_close_safe = df_copy["close"].replace(0, np.nan).bfill().ffill().fillna(1e-9)
-        vol_estimate_pct = (df_copy["ATR"] / current_close_safe) * 100
-        # Increased smoothing for smoothed_vol_pct
-        df_copy["smoothed_vol_pct"] = vol_estimate_pct.rolling(
-            vol_smoothing_window, min_periods=max(1, vol_smoothing_window // 3)
-        ).mean().bfill().ffill().fillna((low_vol_threshold_pct + high_vol_threshold_pct) / 2) # MODIFIED fillna
-        
-        inverted_progress = (high_vol_threshold_pct - df_copy["smoothed_vol_pct"]) / \
-                            (high_vol_threshold_pct - low_vol_threshold_pct + 1e-9)
-        clipped_inverted_progress = np.clip(inverted_progress, 0, 1)
-        df_copy["lookahead_dynamic"] = min_lookahead + clipped_inverted_progress * (max_lookahead - min_lookahead)
-        df_copy["lookahead_dynamic"] = df_copy["lookahead_dynamic"].round().fillna((min_lookahead + max_lookahead) // 2).astype(int)
-
-        # --- 3. Calculate Future Percentage Change ---
-        future_change_pct_list = []
-        close_series = df_copy["close"].to_numpy()
-        lookahead_series = df_copy["lookahead_dynamic"].to_numpy()
-        len_df = len(df_copy)
-
-        for i in range(len_df):
-            current_close_val = close_series[i]
-            if np.isnan(current_close_val) or current_close_val == 0:
-                future_change_pct_list.append(np.nan)
-                continue
-            lookahead = lookahead_series[i]
-            future_index = i + lookahead
-            if future_index >= len_df:
-                future_change_pct_list.append(np.nan)
-            else:
-                future_close_val = close_series[future_index]
-                if np.isnan(future_close_val):
-                    future_change_pct_list.append(np.nan)
-                else:
-                    change_pct = (future_close_val - current_close_val) / current_close_val
-                    future_change_pct_list.append(change_pct)
+    #                 change_pct = (future_close_val - current_close_val) / current_close_val
+    #                 future_change_pct_list.append(change_pct)
     
-        df_copy["future_change_pct"] = future_change_pct_list
+    #     df_copy["future_change_pct"] = future_change_pct_list
         
-        # --- 4. Calculate Smoothed Target Score (TS_pct) ---
-        # Increased min_periods for more smoothing
-        df_copy["TS_pct"] = df_copy["future_change_pct"].rolling(base_window, min_periods=ts_pct_min_periods).mean()
+    #     # --- 4. Calculate Smoothed Target Score (TS_pct) ---
+    #     # Increased min_periods for more smoothing
+    #     df_copy["TS_pct"] = df_copy["future_change_pct"].rolling(base_window, min_periods=ts_pct_min_periods).mean()
 
-        # --- 5. Calculate Final Target 'T' with Adaptive Linear Scaling & Clipping ---
-        # MODIFIED fillna
-        df_copy["ATR_pct_for_norm"] = (df_copy["ATR"] / (current_close_safe + 1e-9)).replace(0, np.nan).bfill().ffill().fillna(1e-7)
-        df_copy["T_raw"] = df_copy["TS_pct"] / (df_copy["ATR_pct_for_norm"] + 1e-7)
+    #     # --- 5. Calculate Final Target 'T' with Adaptive Linear Scaling & Clipping ---
+    #     # MODIFIED fillna
+    #     df_copy["ATR_pct_for_norm"] = (df_copy["ATR"] / (current_close_safe + 1e-9)).replace(0, np.nan).bfill().ffill().fillna(1e-7)
+    #     df_copy["T_raw"] = df_copy["TS_pct"] / (df_copy["ATR_pct_for_norm"] + 1e-7)
         
-        # Adaptive scaling for T_raw
-        abs_t_raw = df_copy["T_raw"].abs().dropna()
-        scale_factor = 1.0 # Default scale_factor
-        if not abs_t_raw.empty:
-            # Scale T_raw so its 98th percentile maps to target_scaled_magnitude_at_percentile
-            percentile_val = abs_t_raw.quantile(0.98) 
-            if percentile_val > 1e-6: # Avoid division by zero
-                scale_factor = target_scaled_magnitude_at_percentile / percentile_val
+    #     # Adaptive scaling for T_raw
+    #     abs_t_raw = df_copy["T_raw"].abs().dropna()
+    #     scale_factor = 1.0 # Default scale_factor
+    #     if not abs_t_raw.empty:
+    #         # Scale T_raw so its 98th percentile maps to target_scaled_magnitude_at_percentile
+    #         percentile_val = abs_t_raw.quantile(0.98) 
+    #         if percentile_val > 1e-6: # Avoid division by zero
+    #             scale_factor = target_scaled_magnitude_at_percentile / percentile_val
         
-        df_copy["T_scaled"] = df_copy["T_raw"] * scale_factor
-        df_copy["T"] = np.clip(df_copy["T_scaled"], -final_clip_range_abs, final_clip_range_abs)
+    #     df_copy["T_scaled"] = df_copy["T_raw"] * scale_factor
+    #     df_copy["T"] = np.clip(df_copy["T_scaled"], -final_clip_range_abs, final_clip_range_abs)
         
-        # Optional: Light final smoothing on T
-        if final_T_smoothing_window > 1:
-            df_copy["T"] = df_copy["T"].rolling(final_T_smoothing_window, min_periods=1).mean()
+    #     # Optional: Light final smoothing on T
+    #     if final_T_smoothing_window > 1:
+    #         df_copy["T"] = df_copy["T"].rolling(final_T_smoothing_window, min_periods=1).mean()
 
-        df_copy["T"] = df_copy["T"].fillna(0) 
+    #     df_copy["T"] = df_copy["T"].fillna(0) 
         
-        return df_copy["T"].reindex(dataframe.index)
+    #     return df_copy["T"].reindex(dataframe.index)
         
     def populate_indicators(self, df: DataFrame, metadata: dict) -> DataFrame:
         """
@@ -624,8 +657,8 @@ class LSTMStrategy_v45_1h(IStrategy):
         Called from populate_entry_trend and populate_exit_trend.
         """
         # Use FIXED window sizes
-        volatility_window = self.fixed_vol_window
-        trend_window = self.fixed_trend_window
+        volatility_window = self.vol_window.value
+        trend_window = self.trend_window.value
     
         # 1. ATR (Volatility)
         atr_series_calc = pd.Series(ta.ATR(df, timeperiod=volatility_window), index=df.index)
@@ -676,8 +709,9 @@ class LSTMStrategy_v45_1h(IStrategy):
         if prediction_signal_col in df.columns:
             slow_pred_ema_period = self.prediction_smoothing_window.value
             fast_pred_ema_period = max(2, int(slow_pred_ema_period // 3))
-            df['pred_ema_fast'] = ta.EMA(df[prediction_signal_col], timeperiod=fast_pred_ema_period)
-            df['pred_ema_slow'] = ta.EMA(df[prediction_signal_col], timeperiod=slow_pred_ema_period)
+            # ✅ Explicitly cast timeperiod to int to prevent TypeError with TA-Lib
+            df['pred_ema_fast'] = ta.EMA(df[prediction_signal_col], timeperiod=int(fast_pred_ema_period))
+            df['pred_ema_slow'] = ta.EMA(df[prediction_signal_col], timeperiod=int(slow_pred_ema_period))
         else:
             # Ensure columns exist even if prediction signal is missing, to prevent errors downstream
             df['pred_ema_fast'] = 0
@@ -699,7 +733,7 @@ class LSTMStrategy_v45_1h(IStrategy):
         df["rolling_trend_threshold_base"] = df["rolling_trend_scaled"].rolling(100, min_periods=10).median().ffill().fillna(0)
 
         # Use fixed multiplier for rolling trend threshold
-        df["rolling_trend_threshold"] = df["rolling_trend_threshold_base"] * self.fixed_rolling_trend_threshold_multiplier
+        df["rolling_trend_threshold"] = df["rolling_trend_threshold_base"] * self.rolling_trend_threshold_multiplier.value
 
         # ✅ Refine pred_confidence using custom_pred_std and rolling_accuracy from populate_indicators
         # rolling_accuracy was calculated in compute_prediction_metrics based on &-s_target vs T.
@@ -730,7 +764,7 @@ class LSTMStrategy_v45_1h(IStrategy):
         # 8. Confidence Threshold (Base is dynamic, multiplier is fixed)
         # This will now use the refined df["pred_confidence"]
         df["confidence_threshold_base"] = df["pred_confidence"].rolling(100).quantile(0.5).ffill().fillna(0)
-        df["confidence_threshold"] = df["confidence_threshold_base"] * self.fixed_confidence_threshold_multiplier
+        df["confidence_threshold"] = df["confidence_threshold_base"] * self.confidence_threshold_multiplier.value
         
         # Add custom_pred_mean to the main df for plotting if not already there (for hyperopt runs)
         # This ensures it's available for plot_config if populate_indicators didn't add it under this exact name
@@ -753,6 +787,8 @@ class LSTMStrategy_v45_1h(IStrategy):
         long_signal_active = crossed_above(processed_df['pred_ema_fast'], processed_df['pred_ema_slow'])
         short_signal_active = crossed_below(processed_df['pred_ema_fast'], processed_df['pred_ema_slow'])
         
+
+        
         def base_entry_condition_series(side: str = None):
             condition = (processed_df["do_predict"] == 1)
             
@@ -767,6 +803,7 @@ class LSTMStrategy_v45_1h(IStrategy):
                     condition &= (processed_df["rolling_trend_scaled"] > processed_df["rolling_trend_threshold"])
                 elif side == "short":
                     condition &= (processed_df["rolling_trend_scaled"] < processed_df["rolling_trend_threshold"])
+    
             return condition
         
         final_long_entry_condition = long_signal_active & base_entry_condition_series(side="long")
@@ -776,7 +813,7 @@ class LSTMStrategy_v45_1h(IStrategy):
         df.loc[final_short_entry_condition & (df["enter_long"] == 0), ["enter_short", "enter_tag"]] = (1, "short")
 
         # Fallback logic remains unchanged
-        high_confidence = processed_df["pred_confidence"] > self.fixed_high_confidence_threshold
+        high_confidence = processed_df["pred_confidence"] > self.high_confidence_threshold.value
         
         # Determine prediction signal column for fallback logic
         prediction_signal_col = "custom_pred_mean" if self.use_mean_prediction_for_signal.value else "&-s_target"
@@ -830,6 +867,8 @@ class LSTMStrategy_v45_1h(IStrategy):
         
         if self.use_vol_filter.value: 
             base_exit_condition &= processed_df['vol_rank'] > processed_df["vol_rank_dynamic_threshold"]
+            
+
         
         if self.use_target_exit_filter.value:
             df.loc[
@@ -890,9 +929,9 @@ class LSTMStrategy_v45_1h(IStrategy):
     
         last_candle = dataframe.iloc[-1]
         
-        # ATR: Use fixed_vol_window for consistency if ATR needs recalculation
+        # ATR: Use vol_window for consistency if ATR needs recalculation
         if 'atr' not in last_candle or pd.isna(last_candle.get('atr')) or last_candle.get('atr', 0) <= 0:
-            atr_series = ta.ATR(dataframe, timeperiod=self.fixed_vol_window) # Use fixed window
+            atr_series = ta.ATR(dataframe, timeperiod=self.vol_window.value) # Use fixed window
             atr = atr_series.iloc[-1] if atr_series is not None and not atr_series.empty and pd.notna(atr_series.iloc[-1]) else current_rate * 0.01
         else:
             atr = last_candle.get('atr', current_rate * 0.01)
@@ -906,9 +945,9 @@ class LSTMStrategy_v45_1h(IStrategy):
         trade_duration_candles = elapsed_minutes / tf_minutes
             
         # Use FIXED parameters
-        initial_duration = self.fixed_initial_stop_duration_candles
-        soft_stop_val = self.fixed_soft_stoploss_pct # Already negative
-        min_profit_val = self.fixed_min_profit_for_trailing
+        initial_duration = self.initial_stop_duration_candles.value
+        soft_stop_val = self.soft_stoploss_pct.value # Already negative
+        min_profit_val = self.min_profit_for_trailing.value
 
         # Get HYPEROPTABLE parameters
         atr_multiplier = self.atr_stoploss_multiplier.value
@@ -958,13 +997,12 @@ class LSTMStrategy_v45_1h(IStrategy):
         volatility_factor = max(0.1, 1.0 - (scaled_volatility * vol_influence * 10)) 
 
         stake_amount = proposed_stake * confidence_factor * volatility_factor
-        stake_amount *= self.fixed_stake_scaling_factor # Use FIXED factor
+        stake_amount *= self.stake_scaling_factor.value 
 
         stake_amount = min(stake_amount, max_stake) 
         if min_stake and stake_amount < min_stake:
             stake_amount = min_stake
         stake_amount = min(stake_amount, max_stake)
-
         return stake_amount
 
     def leverage(self, pair: str, current_time: datetime, current_rate: float,
@@ -1074,6 +1112,94 @@ class LSTMStrategy_v45_1h(IStrategy):
         prediction_mean = prediction_col + "_mean"
         prediction_std = prediction_col + "_std"
 
+        # Determine backtest slice to avoid counting training-region do_predict flags.
+        # 1) Prefer `self.config['timerange']` (CLI or config-provided) if present.
+        # 2) If not available, check metadata for an explicit timerange.
+        # 3) Otherwise infer the backtest slice as the longest contiguous block where
+        #    predictions exist (do_predict==1 or prediction_col non-zero/not-NaN).
+        backtest_mask = pd.Series(False, index=dataframe.index)
+        # Prefer config timerange (this will include CLI --timerange overrides)
+        timerange_str = None
+        try:
+            cfg_tr = getattr(self, "config", {}).get("timerange")
+            if cfg_tr:
+                timerange_str = cfg_tr
+        except Exception:
+            timerange_str = None
+
+        # Next try metadata if config didn't have it
+        if not timerange_str and isinstance(metadata, dict):
+            for k in ("timerange", "time_range", "timeframe_range", "backtest_timerange"):
+                if k in metadata:
+                    timerange_str = metadata[k]
+                    break
+
+        method_used = "none"
+        start_dt = end_dt = None
+        if timerange_str and isinstance(timerange_str, str) and "-" in timerange_str:
+            try:
+                start_s, end_s = timerange_str.split("-")
+                start_dt = datetime.strptime(start_s, "%Y%m%d")
+                end_dt = datetime.strptime(end_s, "%Y%m%d")
+                backtest_mask = (dataframe["date"] >= start_dt) & (dataframe["date"] < end_dt)
+                method_used = "config_or_metadata"
+            except Exception:
+                # fallback to inference
+                timerange_str = None
+
+        if timerange_str is None:
+            # Build a candidate mask where predictions exist or do_predict==1
+            cand_mask = pd.Series(False, index=dataframe.index)
+            if "do_predict" in dataframe.columns:
+                cand_mask = cand_mask | (dataframe["do_predict"] == 1)
+
+            # Safely detect presence of prediction values (avoid ambiguous Series truth value)
+            if prediction_col in dataframe.columns:
+                pred_notna = dataframe[prediction_col].notna()
+                # also treat non-zero predictions as evidence of the backtest block
+                try:
+                    non_zero_pred = dataframe[prediction_col].abs() > 1e-12
+                    cand_mask = cand_mask | (pred_notna & non_zero_pred)
+                except Exception:
+                    cand_mask = cand_mask | pred_notna
+
+            # Find the longest contiguous True run in cand_mask
+            vals = cand_mask.to_numpy(dtype=bool)
+            best_start = best_end = -1
+            cur_start = None
+            for i, v in enumerate(vals):
+                if v and cur_start is None:
+                    cur_start = i
+                if not v and cur_start is not None:
+                    # run ended at i-1
+                    if best_start == -1 or (i - cur_start) > (best_end - best_start):
+                        best_start, best_end = cur_start, i
+                    cur_start = None
+            # handle run to end
+            if cur_start is not None:
+                i = len(vals)
+                if best_start == -1 or (i - cur_start) > (best_end - best_start):
+                    best_start, best_end = cur_start, i
+
+            if best_start != -1:
+                backtest_mask.iloc[best_start:best_end] = True
+                method_used = "inferred_longest_block"
+
+        # Debug logging: report method used and slice info so we can diagnose failures
+        try:
+            logger.info(
+                "Backtest slice detection: method=%s, start=%s, end=%s, rows_in_slice=%d",
+                method_used,
+                start_dt.isoformat() if start_dt is not None else "None",
+                end_dt.isoformat() if end_dt is not None else "None",
+                int(backtest_mask.sum()),
+            )
+        except Exception:
+            logger.info("Backtest slice detection: could not format debug info")
+
+        # Finally run DI analysis on the backtest slice only
+        self.analyze_di_threshold_performance(dataframe.loc[backtest_mask], metadata)
+
         # --- Keep Existing Logging ---
         if log_metrics:
             # Add checks to prevent errors if columns don't exist or are all NaN
@@ -1103,77 +1229,96 @@ class LSTMStrategy_v45_1h(IStrategy):
         dataframe[label_col] = pd.to_numeric(dataframe[label_col], errors='coerce')
 
 
-        # ✅ Step 1: Directional Accuracy (Sign Match) - Handles Label NaNs
+        # ✅ Step 1: Directional Accuracy (Sign Match) - RESTRICTED TO BACKTEST SLICE
+        # Only compute on backtest_mask to avoid training-region contamination
         dataframe["pred_correct"] = np.nan # Initialize with NaN
-        valid_labels_mask = dataframe[label_col].notna()
+        valid_labels_mask = dataframe[label_col].notna() & backtest_mask
         if valid_labels_mask.sum() > 0:
             dataframe.loc[valid_labels_mask, "pred_correct"] = np.where(
                 np.sign(dataframe.loc[valid_labels_mask, label_col]) == np.sign(dataframe.loc[valid_labels_mask, prediction_col]),
                 1, 0
             )
 
-        # ✅ Step 2: Rolling Accuracy (Last 50 candles) - Needed for refined confidence
-        # Calculate rolling mean of correctness. Fill initial NaNs with 0.5 (neutral assumption)
-        rolling_accuracy_window = 50 # Or use a hyperparameter
-        dataframe["rolling_accuracy"] = dataframe["pred_correct"].rolling(
+        # ✅ Step 2: Rolling Accuracy (Last 50 candles) - RESTRICTED TO BACKTEST SLICE
+        # Calculate rolling mean of correctness, but only within backtest slice
+        rolling_accuracy_window = 50
+        rolling_acc_series = dataframe.loc[backtest_mask, "pred_correct"].rolling(
             rolling_accuracy_window, min_periods=max(1, rolling_accuracy_window // 5)
-        ).mean().ffill().fillna(0.5)
+        ).mean()
+        dataframe.loc[backtest_mask, "rolling_accuracy"] = rolling_acc_series
+        # Fill non-backtest rows with NaN (they are not part of trading period)
+        dataframe.loc[~backtest_mask, "rolling_accuracy"] = np.nan
 
-        # ✅ Step 3: Mean Absolute Error (MAE) - Keep Existing Calculation
-        dataframe["mae"] = np.abs(dataframe[label_col] - dataframe[prediction_col]).rolling(100, min_periods=1).mean()
+        # ✅ Step 3: Mean Absolute Error (MAE) - RESTRICTED TO BACKTEST SLICE
+        # Only compute MAE within backtest slice
+        mae_series = np.abs(dataframe.loc[backtest_mask, label_col] - dataframe.loc[backtest_mask, prediction_col]).rolling(100, min_periods=1).mean()
+        dataframe.loc[backtest_mask, "mae"] = mae_series
+        dataframe.loc[~backtest_mask, "mae"] = np.nan
 
-        # ✅ Step 4: *** MODIFIED Confidence Calculation ***
+        # ✅ Step 4: *** MODIFIED Confidence Calculation - RESTRICTED TO BACKTEST SLICE ***
         std_col = prediction_std
         if std_col in dataframe.columns:
-            # 4a. Calculate Base Confidence (Signal-to-Noise Ratio)
+            # 4a. Calculate Base Confidence (Signal-to-Noise Ratio) - only within backtest
             base_confidence = (np.abs(dataframe[prediction_col]) / (dataframe[std_col] + 1e-6)).clip(0, 1)
 
             # 4b. Calculate Refined Prediction Confidence (Modulated by Rolling Accuracy)
-            dataframe["pred_confidence"] = (base_confidence * dataframe["rolling_accuracy"]).clip(0, 1).fillna(0) # MODIFIED LINE
+            # Set confidence to NaN outside backtest slice (not part of trading period)
+            dataframe["pred_confidence"] = np.nan
+            dataframe.loc[backtest_mask, "pred_confidence"] = (
+                (base_confidence[backtest_mask] * dataframe.loc[backtest_mask, "rolling_accuracy"]).clip(0, 1).fillna(0)
+            )
 
             # 4c. Confidence score is only counted for correct predictions (Using Refined Confidence)
-            # Use np.nan_to_num to handle potential NaNs from prediction_correct
-            confidence_correct_array = np.where(
-                dataframe["pred_correct"] == 1, dataframe["pred_confidence"], 0
-            )
-            dataframe["confidence_correct"] = np.nan_to_num(confidence_correct_array, nan=0.0) # Uses refined confidence
+            dataframe["confidence_correct"] = np.nan
+            valid_confidence_mask = backtest_mask & (dataframe["pred_correct"] == 1)
+            dataframe.loc[valid_confidence_mask, "confidence_correct"] = dataframe.loc[valid_confidence_mask, "pred_confidence"]
 
-            # 4d. Normalize avg confidence over correct predictions - Keep Existing Calculation
-            correct_preds = dataframe["pred_correct"].rolling(100, min_periods=1).sum()
-            # Ensure confidence_correct exists before rolling on it
+            # 4d. Normalize avg confidence over correct predictions - RESTRICTED TO BACKTEST
+            correct_preds_series = dataframe.loc[backtest_mask, "pred_correct"].rolling(100, min_periods=1).sum()
             if "confidence_correct" in dataframe.columns:
-                 dataframe["avg_confidence_correct"] = dataframe["confidence_correct"].rolling(100, min_periods=1).sum() / (correct_preds + 1e-6)
-                 dataframe["avg_confidence_correct"] = dataframe["avg_confidence_correct"].fillna(0) # Fill potential NaNs from division
+                confidence_sum_series = dataframe.loc[backtest_mask, "confidence_correct"].rolling(100, min_periods=1).sum()
+                dataframe.loc[backtest_mask, "avg_confidence_correct"] = confidence_sum_series / (correct_preds_series + 1e-6)
+                dataframe.loc[~backtest_mask, "avg_confidence_correct"] = np.nan
             else:
-                 dataframe["avg_confidence_correct"] = np.nan
+                dataframe["avg_confidence_correct"] = np.nan
 
         else: # Keep Existing Warning
             logger.warning(f"⚠️ Column '{std_col}' not found. Skipping confidence tracking.")
-            dataframe["pred_confidence"] = 0.0 # Ensure column exists if skipped
-            dataframe["confidence_correct"] = 0.0
+            dataframe["pred_confidence"] = np.nan
+            dataframe["confidence_correct"] = np.nan
             dataframe["avg_confidence_correct"] = np.nan
 
-        # ✅ Step 5: Calculate Fraction of Predicted Targets - Keep Existing Calculation
-        total_predictions = (dataframe["do_predict"] == 1).sum() if "do_predict" in dataframe.columns else 0
-        if log_metrics and "do_predict" in dataframe.columns:
-            logger.info(f"🔍 `do_predict=1` Count: {total_predictions}, `do_predict=-1` Count: {(dataframe['do_predict'] == -1).sum()}")
-        total_targets_available = dataframe[label_col].notna().sum()
+        # ✅ Step 5: Calculate Fraction of Predicted Targets (restricted to backtest slice)
+        if "do_predict" in dataframe.columns:
+            # Only count predictions that fall inside the backtest (where labels exist)
+            total_predictions = ((dataframe["do_predict"] == 1) & backtest_mask).sum()
+            total_rejected = ((dataframe["do_predict"] == 0) & backtest_mask).sum()
+            total_unknown = ((dataframe["do_predict"] == -1) & backtest_mask).sum()
+            if log_metrics:
+                logger.info(
+                    f"🔍 Backtest `do_predict=1` Count: {total_predictions}, `do_predict=0` Count: {total_rejected}, `do_predict=-1` Count: {total_unknown}"
+                )
+        else:
+            total_predictions = 0
+        total_targets_available = backtest_mask.sum()
         fraction_predicted = total_predictions / total_targets_available if total_targets_available > 0 else 0
 
-        # ✅ Step 6: Store Metrics in Class-Level List - Keep Existing Calculation
+        # ✅ Step 6: Store Metrics in Class-Level List - BACKTEST SLICE ONLY
         pair = metadata["pair"]
-        # Calculate correlation safely
-        valid_df_for_corr = dataframe.dropna(subset=[label_col, prediction_col])
+        # Calculate correlation safely - RESTRICTED TO BACKTEST SLICE
+        valid_df_for_corr = dataframe.loc[backtest_mask].dropna(subset=[label_col, prediction_col])
         correlation = valid_df_for_corr[prediction_col].corr(valid_df_for_corr[label_col]) if not valid_df_for_corr.empty else np.nan
 
         metrics = {
             "pair": pair,
             "total_predictions": total_predictions,
             "fraction_predicted": fraction_predicted,
-            "rolling_accuracy": dataframe["rolling_accuracy"].iloc[-1] if "rolling_accuracy" in dataframe.columns else np.nan,
-            "mae": dataframe["mae"].iloc[-1] if "mae" in dataframe.columns else np.nan,
-            "avg_confidence_correct": dataframe["avg_confidence_correct"].iloc[-1] if "avg_confidence_correct" in dataframe.columns else np.nan,
-            "correlation": correlation
+            "rolling_accuracy": dataframe.loc[backtest_mask, "rolling_accuracy"].iloc[-1] if backtest_mask.sum() > 0 and "rolling_accuracy" in dataframe.columns else np.nan,
+            "mae": dataframe.loc[backtest_mask, "mae"].iloc[-1] if backtest_mask.sum() > 0 and "mae" in dataframe.columns else np.nan,
+            "avg_confidence_correct": dataframe.loc[backtest_mask, "avg_confidence_correct"].iloc[-1] if backtest_mask.sum() > 0 and "avg_confidence_correct" in dataframe.columns else np.nan,
+            "correlation": correlation,
+            "backtest_rows": backtest_mask.sum(),
+            "detection_method": method_used
         }
         # Ensure storage exists
         if not hasattr(self, 'pred_metrics_storage'):
@@ -1201,6 +1346,101 @@ class LSTMStrategy_v45_1h(IStrategy):
 
         return dataframe
 
+    def analyze_di_threshold_performance(self, df: pd.DataFrame, metadata: Dict) -> None:
+        """
+        Comprehensive analysis of DI threshold performance to understand prediction rejection patterns.
+        """
+        # Try different possible DI column names
+        di_col = None
+        for col_name in ["DI_values", "DI_threshold", "DI", "dissimilarity_index"]:
+            if col_name in df.columns:
+                di_col = col_name
+                break
+        
+        if di_col is None or "do_predict" not in df.columns:
+            logger.info("📊 DI threshold column not found - skipping DI analysis")
+            return
+        
+        # Get DI values where available
+        di_mask = df[di_col].notna()
+        if di_mask.sum() < 10:
+            logger.info("📊 Insufficient DI data for analysis")
+            return
+        
+        di_values = df.loc[di_mask, di_col]
+        do_predict_values = df.loc[di_mask, "do_predict"]
+        
+        # DI statistics
+        di_stats = {
+            'mean': di_values.mean(),
+            'median': di_values.median(),
+            'std': di_values.std(),
+            'min': di_values.min(),
+            'max': di_values.max(),
+            'q25': di_values.quantile(0.25),
+            'q75': di_values.quantile(0.75),
+            'q90': di_values.quantile(0.90),
+            'q95': di_values.quantile(0.95),
+            'q99': di_values.quantile(0.99)
+        }
+        
+        # Prediction acceptance by DI ranges
+        di_ranges = [
+            (0, 1), (1, 5), (5, 10), (10, 50), (50, 100), 
+            (100, 500), (500, 1000), (1000, 5000), (5000, float('inf'))
+        ]
+        
+        range_analysis = []
+        for low, high in di_ranges:
+            mask = (di_values >= low) & (di_values < high)
+            if mask.sum() > 0:
+                accepted = (do_predict_values[mask] == 1).sum()
+                rejected = (do_predict_values[mask] == 0).sum() 
+                total = mask.sum()
+                acceptance_rate = accepted / total if total > 0 else 0
+                
+                range_analysis.append({
+                    'range': f"[{low}, {high})",
+                    'count': total,
+                    'accepted': accepted,
+                    'rejected': rejected,
+                    'acceptance_rate': acceptance_rate
+                })
+        
+        # Log comprehensive DI analysis
+        pair_name = metadata.get('pair', 'Unknown')
+        logger.info(f"📊 DI Analysis for {pair_name}:")
+        logger.info(f"📊 DI Stats - Mean: {di_stats['mean']:.2f}, Median: {di_stats['median']:.2f}, Std: {di_stats['std']:.2f}")
+        logger.info(f"📊 DI Range - Min: {di_stats['min']:.2f}, Max: {di_stats['max']:.2f}")
+        logger.info(f"📊 DI Percentiles - Q25: {di_stats['q25']:.2f}, Q75: {di_stats['q75']:.2f}, Q90: {di_stats['q90']:.2f}, Q95: {di_stats['q95']:.2f}, Q99: {di_stats['q99']:.2f}")
+        
+        for analysis in range_analysis:
+            if analysis['count'] > 0:
+                logger.info(f"📊 DI Range {analysis['range']}: {analysis['count']} samples, {analysis['accepted']} accepted ({analysis['acceptance_rate']:.2%}), {analysis['rejected']} rejected")
+        
+        # Current threshold analysis
+        current_threshold = self.freqai_info.get("feature_parameters", {}).get("DI_threshold", 10.0)
+        threshold_exceeded = (di_values > current_threshold).sum()
+        threshold_rejection = threshold_exceeded / len(di_values) if len(di_values) > 0 else 0
+        
+        logger.info(f"📊 Current DI_threshold: {current_threshold}")
+        logger.info(f"📊 Predictions exceeding threshold (rejected): {threshold_exceeded}/{len(di_values)} ({threshold_rejection:.2%})")
+        
+        # Suggest optimal threshold for different acceptance rates
+        acceptance_rates = [0.80, 0.85, 0.90, 0.95]
+        suggested_thresholds = []
+        
+        for target_rate in acceptance_rates:
+            # Find threshold that gives target acceptance rate
+            threshold_percentile = (1 - target_rate) * 100
+            if threshold_percentile <= 99:
+                suggested_threshold = np.percentile(di_values, 100 - threshold_percentile)
+                suggested_thresholds.append((target_rate, suggested_threshold))
+        
+        logger.info(f"📊 Suggested DI_threshold values for different acceptance rates:")
+        for rate, threshold in suggested_thresholds:
+            logger.info(f"📊   {rate:.0%} acceptance: DI_threshold = {threshold:.1f}")
+
     # Keep your save_prediction_metrics function exactly as provided
     def save_prediction_metrics(self, filename="pred_metrics.csv"):
         """
@@ -1222,36 +1462,8 @@ class LSTMStrategy_v45_1h(IStrategy):
             logger.info(f"✅ Prediction metrics saved to {output_path}")
         except Exception as e:
             logger.exception(f"Error saving prediction metrics: {e}")
+    
 
-    def get_order_flow_features(self, dataframe: DataFrame, metadata: Dict) -> DataFrame:
-        """
-        Calculates basic order flow features from trade data, using Freqtrade's built-in columns.
-        Handles potential errors gracefully.
-        """
-
-        try:
-            # ✅ Check if the required columns exist
-            if not all(col in dataframe.columns for col in ['trades_count', 'volume_weighted_average_price', 'buy_ratio']):
-                logger.warning(f"Required order flow columns not found in dataframe for {metadata['pair']}. Skipping order flow features.")
-                dataframe['order_flow_volume'] = 0
-                dataframe['order_flow_buy_ratio'] = 0
-                return dataframe
-
-            # ✅ Calculate order flow volume (using volume_weighted_average_price * trades_count as a proxy)
-            # This is a simplified calculation; adjust as needed based on your data
-            dataframe['order_flow_volume'] = dataframe['volume_weighted_average_price'] * dataframe['trades_count']
-
-            # ✅ Use the built-in buy_ratio column
-            dataframe['order_flow_buy_ratio'] = dataframe['buy_ratio']
-
-            logger.info(f"✅ Successfully calculated order flow features for {metadata['pair']}.")
-
-        except Exception as e:
-            logger.exception(f"❌ Error calculating order flow features for {metadata['pair']}: {e}")
-            dataframe['order_flow_volume'] = 0
-            dataframe['order_flow_buy_ratio'] = 0
-
-        return dataframe
     
     def load_historical_fng_data(self) -> pd.DataFrame | None:
         """
