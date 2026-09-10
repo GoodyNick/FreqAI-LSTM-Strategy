@@ -1,4 +1,4 @@
-# FreqAI Strategy - AI-Driven Trading with LSTM, built upon Freqtrade's Freqai.
+# FreqAI Strategy - AI-Driven Trading with LSTM, built upon Freqtrade's FreqAI platform.
 
 Disclaimer: This repository contains a custom LSTM machine learning strategy built for use with the Freqtrade algorithmic trading framework. This is an independent, community-driven project licensed under GPL-3.0 and is not affiliated with, nor endorsed by, the core Freqtrade development team.
 
