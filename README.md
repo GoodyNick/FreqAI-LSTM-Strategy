@@ -80,5 +80,5 @@ you can also use run.sh script for backtesting, plotting, or hyperopt freqai str
 📬 **Contact:** [GitHub Issues](https://github.com/GoodyNick/Freqai-Strategy/issues) or reach out on Telegram(@GoodyNick) or my email(a.goodarzinick@gmail.com)!
 
 ---
-**License:** MIT
+**License:** GPL v3
 
